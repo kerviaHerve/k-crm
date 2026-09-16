@@ -118,8 +118,9 @@ button { touch-action: manipulation; cursor: pointer; }
 
 .main { min-width: 0; }
 .topbar {
-  height: 64px;
-  display: flex; align-items: baseline; gap: 16px;
+  position: relative;
+  height: 56px;
+  display: flex; align-items: center; gap: 16px;
   padding: 0 28px;
   border-bottom: 1px solid var(--line);
 }
@@ -158,7 +159,7 @@ button { touch-action: manipulation; cursor: pointer; }
 }
 
 .preferences {
-  position: absolute; top: 72px; right: 28px; z-index: 40;
+  position: absolute; top: 56px; right: 28px; z-index: 40;
   width: 280px; padding: 16px;
   border: 1px solid var(--line); background: var(--surface);
 }
