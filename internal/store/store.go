@@ -268,6 +268,7 @@ func (s *Store) AujourdHui(now time.Time) (AujourdHui, error) {
 		SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,'','',''
 		FROM people p
 		WHERE p.world='prospect'
+		  AND p.lead_state <> 'perdu'
 		  AND NOT EXISTS (SELECT 1 FROM relances r WHERE r.person_id=p.id AND r.open=1)
 		ORDER BY p.name`)
 	if err != nil {

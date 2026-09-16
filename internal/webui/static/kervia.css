@@ -1,0 +1,378 @@
+:root {
+  --k-theme-default: carbon;
+  --k-brand-kerv-on-light: #242528;
+  --k-brand-kerv-on-dark: #F4F5F1;
+  --k-brand-ia: #B8E263;
+  --k-brand-signature-on-light: #59615C;
+  --k-brand-signature-on-dark: #C7CDC8;
+  --k-brand-separator-on-light: #C6CAC6;
+  --k-brand-separator-on-dark: #4F5552;
+  --k-brand-product-size: 12px;
+  --k-brand-product-line: 16px;
+  --k-brand-product-weight: 700;
+  --k-brand-product-tracking: .12em;
+  --k-font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --k-space-0: 0;
+  --k-space-1: 2px;
+  --k-space-2: 4px;
+  --k-space-3: 6px;
+  --k-space-4: 8px;
+  --k-space-5: 12px;
+  --k-space-6: 16px;
+  --k-space-7: 20px;
+  --k-space-8: 24px;
+  --k-space-9: 32px;
+  --k-space-10: 40px;
+  --k-space-11: 48px;
+  --k-space-12: 64px;
+  --k-radius-xs: 4px;
+  --k-radius-sm: 6px;
+  --k-radius-md: 8px;
+  --k-radius-lg: 11px;
+  --k-radius-xl: 14px;
+  --k-radius-full: 999px;
+  --k-control-sm: 32px;
+  --k-control-md: 40px;
+  --k-control-touch: 44px;
+  --k-shadow-1: 0 1px 2px rgba(0, 0, 0, .04);
+  --k-shadow-2: 0 12px 35px rgba(0, 0, 0, .12);
+  --k-shadow-3: 0 24px 80px rgba(0, 0, 0, .28);
+  --k-shadow-4: 0 30px 100px rgba(0, 0, 0, .35);
+  --k-duration-instant: 90ms;
+  --k-duration-fast: 140ms;
+  --k-duration-base: 200ms;
+  --k-duration-surface: 260ms;
+  --k-duration-data: 320ms;
+  --k-ease-enter: cubic-bezier(.22, 1, .36, 1);
+  --k-ease-exit: cubic-bezier(.4, 0, 1, 1);
+  --k-ease-standard: cubic-bezier(.4, 0, .2, 1);
+  --k-mobile-touch-min: 44px;
+  --k-mobile-input-font-min: 16px;
+  --k-desktop-control-min: 32px;
+  --k-body-min: 13px;
+}
+
+/*
+ * Kervia application size contract v1.2.0.
+ * Closed set: s / l / xl. L is the default.
+ * Components consume the *-current variables and never calculate a local scale.
+ */
+:root,
+[data-kervia-size="l"] {
+  --k-ui-scale: 1;
+  --k-font-display-current: 48px;
+  --k-line-display-current: 52px;
+  --k-font-h1-current: 32px;
+  --k-line-h1-current: 38px;
+  --k-font-h2-current: 24px;
+  --k-line-h2-current: 30px;
+  --k-font-h3-current: 18px;
+  --k-line-h3-current: 24px;
+  --k-font-body-lg-current: 16px;
+  --k-line-body-lg-current: 24px;
+  --k-font-body-current: 14px;
+  --k-line-body-current: 21px;
+  --k-font-body-sm-current: 13px;
+  --k-line-body-sm-current: 18px;
+  --k-font-label-current: 12px;
+  --k-line-label-current: 16px;
+  --k-font-meta-current: 11px;
+  --k-line-meta-current: 14px;
+  --k-input-font-current: 14px;
+  --k-space-xs-current: 4px;
+  --k-space-sm-current: 8px;
+  --k-space-md-current: 12px;
+  --k-space-lg-current: 16px;
+  --k-space-xl-current: 20px;
+  --k-space-2xl-current: 24px;
+  --k-space-section-current: 32px;
+  --k-control-sm-current: 32px;
+  --k-control-base-current: 40px;
+  --k-control-current: var(--k-control-base-current);
+  --k-control-comfort-current: 44px;
+  --k-control-touch-current: 44px;
+  --k-icon-xs-current: 14px;
+  --k-icon-sm-current: 16px;
+  --k-icon-current: 18px;
+  --k-icon-lg-current: 20px;
+  --k-icon-xl-current: 24px;
+  --k-sidebar-current: 256px;
+  --k-topbar-current: 64px;
+  --k-content-padding-current: 20px;
+  --k-content-gap-current: 16px;
+  --k-logo-current: 48px;
+  --k-table-row-current: 40px;
+  --k-chart-main-current: 288px;
+  --k-dialog-max-current: 640px;
+  --k-sheet-width-current: 448px;
+  --k-popover-width-current: 320px;
+  --k-surface-padding-current: 16px;
+  --k-radius-control-current: 8px;
+  --k-radius-surface-current: 11px;
+}
+
+[data-kervia-size="s"] {
+  --k-ui-scale: 0.875;
+  --k-font-display-current: 42px;
+  --k-line-display-current: 46px;
+  --k-font-h1-current: 28px;
+  --k-line-h1-current: 34px;
+  --k-font-h2-current: 21px;
+  --k-line-h2-current: 26px;
+  --k-font-h3-current: 16px;
+  --k-line-h3-current: 21px;
+  --k-font-body-lg-current: 14px;
+  --k-line-body-lg-current: 21px;
+  --k-font-body-current: 13px;
+  --k-line-body-current: 19px;
+  --k-font-body-sm-current: 13px;
+  --k-line-body-sm-current: 18px;
+  --k-font-label-current: 12px;
+  --k-line-label-current: 16px;
+  --k-font-meta-current: 11px;
+  --k-line-meta-current: 14px;
+  --k-input-font-current: 13px;
+  --k-space-xs-current: 4px;
+  --k-space-sm-current: 7px;
+  --k-space-md-current: 10px;
+  --k-space-lg-current: 14px;
+  --k-space-xl-current: 18px;
+  --k-space-2xl-current: 21px;
+  --k-space-section-current: 28px;
+  --k-control-sm-current: 32px;
+  --k-control-base-current: 36px;
+  --k-control-current: var(--k-control-base-current);
+  --k-control-comfort-current: 40px;
+  --k-control-touch-current: 44px;
+  --k-icon-xs-current: 14px;
+  --k-icon-sm-current: 14px;
+  --k-icon-current: 16px;
+  --k-icon-lg-current: 18px;
+  --k-icon-xl-current: 21px;
+  --k-sidebar-current: 224px;
+  --k-topbar-current: 56px;
+  --k-content-padding-current: 16px;
+  --k-content-gap-current: 14px;
+  --k-logo-current: 42px;
+  --k-table-row-current: 36px;
+  --k-chart-main-current: 252px;
+  --k-dialog-max-current: 560px;
+  --k-sheet-width-current: 392px;
+  --k-popover-width-current: 280px;
+  --k-surface-padding-current: 14px;
+  --k-radius-control-current: 6px;
+  --k-radius-surface-current: 8px;
+}
+
+[data-kervia-size="xl"] {
+  --k-ui-scale: 1.125;
+  --k-font-display-current: 54px;
+  --k-line-display-current: 59px;
+  --k-font-h1-current: 36px;
+  --k-line-h1-current: 43px;
+  --k-font-h2-current: 27px;
+  --k-line-h2-current: 34px;
+  --k-font-h3-current: 20px;
+  --k-line-h3-current: 27px;
+  --k-font-body-lg-current: 18px;
+  --k-line-body-lg-current: 27px;
+  --k-font-body-current: 16px;
+  --k-line-body-current: 24px;
+  --k-font-body-sm-current: 15px;
+  --k-line-body-sm-current: 20px;
+  --k-font-label-current: 14px;
+  --k-line-label-current: 18px;
+  --k-font-meta-current: 12px;
+  --k-line-meta-current: 16px;
+  --k-input-font-current: 16px;
+  --k-space-xs-current: 5px;
+  --k-space-sm-current: 9px;
+  --k-space-md-current: 14px;
+  --k-space-lg-current: 18px;
+  --k-space-xl-current: 23px;
+  --k-space-2xl-current: 27px;
+  --k-space-section-current: 36px;
+  --k-control-sm-current: 36px;
+  --k-control-base-current: 44px;
+  --k-control-current: var(--k-control-base-current);
+  --k-control-comfort-current: 48px;
+  --k-control-touch-current: 48px;
+  --k-icon-xs-current: 16px;
+  --k-icon-sm-current: 18px;
+  --k-icon-current: 20px;
+  --k-icon-lg-current: 23px;
+  --k-icon-xl-current: 27px;
+  --k-sidebar-current: 288px;
+  --k-topbar-current: 72px;
+  --k-content-padding-current: 24px;
+  --k-content-gap-current: 18px;
+  --k-logo-current: 54px;
+  --k-table-row-current: 44px;
+  --k-chart-main-current: 324px;
+  --k-dialog-max-current: 720px;
+  --k-sheet-width-current: 504px;
+  --k-popover-width-current: 360px;
+  --k-surface-padding-current: 18px;
+  --k-radius-control-current: 11px;
+  --k-radius-surface-current: 14px;
+}
+
+@media (max-width: 767px) {
+  :root,
+  [data-kervia-size="s"],
+  [data-kervia-size="l"],
+  [data-kervia-size="xl"] {
+    --k-control-current: max(var(--k-control-base-current), var(--k-mobile-touch-min));
+    --k-input-font-current: var(--k-mobile-input-font-min);
+  }
+}
+
+[data-kervia-theme="carbon"] {
+  color-scheme: dark;
+  --k-background: #101213;
+  --k-foreground: #f3f5f0;
+  --k-surface: #17191a;
+  --k-surface-subtle: #1d2021;
+  --k-surface-raised: #242829;
+  --k-primary: #b8e263;
+  --k-on-primary: #172014;
+  --k-accent: #7fd4b8;
+  --k-muted: #202324;
+  --k-muted-foreground: #929993;
+  --k-border: rgba(240, 244, 236, .11);
+  --k-border-strong: rgba(240, 244, 236, .20);
+  --k-input: #111314;
+  --k-ring: #b8e263;
+  --k-sidebar: #121415;
+  --k-destructive: #d97c75;
+  --k-success: #91c97b;
+  --k-warning: #d5aa57;
+  --k-info: #80a9bd;
+  --k-chart-1: #b8e263;
+  --k-chart-2: #7fd4b8;
+  --k-chart-3: #80a9bd;
+  --k-chart-4: #d5aa57;
+  --k-chart-5: #a994c4;
+}
+
+[data-kervia-theme="atelier"] {
+  color-scheme: dark;
+  --k-background: #0a0908;
+  --k-foreground: #eae0d5;
+  --k-surface: #14222a;
+  --k-surface-subtle: #192b33;
+  --k-surface-raised: #243943;
+  --k-primary: #c6ac8f;
+  --k-on-primary: #211b16;
+  --k-accent: #7fd4b8;
+  --k-muted: #11100e;
+  --k-muted-foreground: #a89e8f;
+  --k-border: rgba(234, 224, 213, .10);
+  --k-border-strong: rgba(234, 224, 213, .20);
+  --k-input: #11100e;
+  --k-ring: #c6ac8f;
+  --k-sidebar: #0f0e0c;
+  --k-destructive: #c97b6e;
+  --k-success: #8fb37d;
+  --k-warning: #d4a84a;
+  --k-info: #7d9fb3;
+  --k-chart-1: #c6ac8f;
+  --k-chart-2: #7fd4b8;
+  --k-chart-3: #7d9fb3;
+  --k-chart-4: #d4a84a;
+  --k-chart-5: #9b8bb3;
+}
+
+[data-kervia-theme="studio"] {
+  color-scheme: light;
+  --k-background: #eef0eb;
+  --k-foreground: #25282a;
+  --k-surface: #fbfcf9;
+  --k-surface-subtle: #f3f5f0;
+  --k-surface-raised: #e3e7df;
+  --k-primary: #8db53f;
+  --k-on-primary: #18200f;
+  --k-accent: #58a98f;
+  --k-muted: #e8ebe6;
+  --k-muted-foreground: #69716b;
+  --k-border: rgba(35, 37, 40, .12);
+  --k-border-strong: rgba(35, 37, 40, .22);
+  --k-input: #ffffff;
+  --k-ring: #739831;
+  --k-sidebar: #232528;
+  --k-destructive: #b9524e;
+  --k-success: #568a51;
+  --k-warning: #a87824;
+  --k-info: #4e788e;
+  --k-chart-1: #83aa38;
+  --k-chart-2: #58a98f;
+  --k-chart-3: #5f8194;
+  --k-chart-4: #b88738;
+  --k-chart-5: #7b6795;
+}
+
+[data-kervia-theme="mineral"] {
+  color-scheme: dark;
+  --k-background: #071019;
+  --k-foreground: #edf5f6;
+  --k-surface: #101b25;
+  --k-surface-subtle: #15232f;
+  --k-surface-raised: #1c2c39;
+  --k-primary: #7fd4b8;
+  --k-on-primary: #09201b;
+  --k-accent: #8fb8ce;
+  --k-muted: #0b141d;
+  --k-muted-foreground: #8ca0ad;
+  --k-border: rgba(193, 219, 229, .11);
+  --k-border-strong: rgba(193, 219, 229, .20);
+  --k-input: #0a131c;
+  --k-ring: #7fd4b8;
+  --k-sidebar: #0b141d;
+  --k-destructive: #d27676;
+  --k-success: #88d49e;
+  --k-warning: #dbad5d;
+  --k-info: #8fb8ce;
+  --k-chart-1: #7fd4b8;
+  --k-chart-2: #8fb8ce;
+  --k-chart-3: #96a4d5;
+  --k-chart-4: #d5b36d;
+  --k-chart-5: #b899d1;
+}
+
+[data-kervia-theme="sand"] {
+  color-scheme: light;
+  --k-background: #eee9de;
+  --k-foreground: #292a27;
+  --k-surface: #fffdf7;
+  --k-surface-subtle: #f4f0e7;
+  --k-surface-raised: #e3ddcf;
+  --k-primary: #89ad43;
+  --k-on-primary: #1d2810;
+  --k-accent: #5c9e88;
+  --k-muted: #e8e2d6;
+  --k-muted-foreground: #716b61;
+  --k-border: rgba(41, 42, 39, .12);
+  --k-border-strong: rgba(41, 42, 39, .22);
+  --k-input: #fffefb;
+  --k-ring: #658438;
+  --k-sidebar: #292a27;
+  --k-destructive: #b85e54;
+  --k-success: #5d8a56;
+  --k-warning: #a9792d;
+  --k-info: #4d7785;
+  --k-chart-1: #89ad43;
+  --k-chart-2: #5c9e88;
+  --k-chart-3: #628497;
+  --k-chart-4: #bb8b3f;
+  --k-chart-5: #816c91;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --k-duration-instant: 1ms;
+    --k-duration-fast: 1ms;
+    --k-duration-base: 1ms;
+    --k-duration-surface: 1ms;
+    --k-duration-data: 1ms;
+  }
+}

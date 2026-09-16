@@ -200,6 +200,54 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			return nil, err
 		}
 		return textResult(person)
+	case "crm_marquer_perdu":
+		var args struct{ ID, Why string }
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.MarkLost(args.ID, args.Why)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_relancer":
+		var args struct{ ID, Due, Why, Channel string }
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.CompleteRelance(args.ID, args.Due, args.Why, args.Channel)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_reporter":
+		var args struct{ ID, Due, Why, Channel string }
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.PlanRelance(args.ID, args.Due, args.Why, args.Channel)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_chercher":
+		var args struct{ Q string }
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		hits, err := s.Store.Search(args.Q)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(hits)
 	default:
 		return nil, fmt.Errorf("unknown tool")
 	}

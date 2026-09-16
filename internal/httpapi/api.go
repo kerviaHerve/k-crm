@@ -49,6 +49,21 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/people/{id}/validate", s.auth(s.validateLead))
 	mux.HandleFunc("POST /api/v1/tools/crm_noter", s.auth(s.addNoteTool))
 	mux.HandleFunc("POST /api/v1/tools/crm_valider_lead", s.auth(s.validateLeadTool))
+	mux.HandleFunc("GET /api/v1/state", s.auth(s.state))
+	mux.HandleFunc("GET /api/v1/people", s.auth(s.search))
+	mux.HandleFunc("POST /api/v1/people/{id}/lost", s.auth(s.markLost))
+	mux.HandleFunc("POST /api/v1/people/{id}/relance", s.auth(s.relance))
+	mux.HandleFunc("POST /api/v1/tools/crm_marquer_perdu", s.auth(s.markLostTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_relancer", s.auth(s.relanceTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_reporter", s.auth(s.relanceTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_chercher", s.auth(s.search))
+	mux.HandleFunc("GET /ui/api/state", s.state)
+	mux.HandleFunc("GET /ui/api/search", s.search)
+	mux.HandleFunc("POST /ui/api/prospects", s.createProspect)
+	mux.HandleFunc("POST /ui/api/people/{id}/notes", s.addNote)
+	mux.HandleFunc("POST /ui/api/people/{id}/validate", s.validateLead)
+	mux.HandleFunc("POST /ui/api/people/{id}/lost", s.markLost)
+	mux.HandleFunc("POST /ui/api/people/{id}/relance", s.relance)
 	webui.Mount(mux, s.Store, s.now)
 	return mux
 }
@@ -140,7 +155,7 @@ func storeHTTP(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusNotFound, err.Error())
 		return
 	}
-	if errors.Is(err, store.ErrNotProspect) {
+	if errors.Is(err, store.ErrNotProspect) || errors.Is(err, store.ErrLost) {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}

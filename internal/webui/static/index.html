@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="fr-CH" data-kervia-theme="carbon" data-kervia-size="l">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>K-CRM</title>
+  <script>
+    (() => {
+      const themes = ["carbon", "atelier", "studio", "mineral", "sand"];
+      const sizes = ["s", "l", "xl"];
+      try {
+        const theme = localStorage.getItem("kervia-ui-theme");
+        const size = localStorage.getItem("kervia-ui-size");
+        document.documentElement.dataset.kerviaTheme = themes.includes(theme) ? theme : "carbon";
+        document.documentElement.dataset.kerviaSize = sizes.includes(size) ? size : "l";
+      } catch (_) {
+        document.documentElement.dataset.kerviaTheme = "carbon";
+        document.documentElement.dataset.kerviaSize = "l";
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="kervia.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <symbol id="Settings2" viewBox="0 0 24 24"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+      <symbol id="Minimize2" viewBox="0 0 24 24"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></symbol>
+      <symbol id="Square" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/></symbol>
+      <symbol id="Maximize2" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></symbol>
+      <symbol id="Search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="Sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+      <symbol id="Phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+      <symbol id="Mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+      <symbol id="Calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+      <symbol id="Users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+      <symbol id="UserPlus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol>
+      <symbol id="Check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="AlertTriangle" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+      <symbol id="LayoutDashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+      <symbol id="Plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    </defs>
+  </svg>
+
+  <a class="sr-only" href="#contenu">Aller au contenu</a>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand-product">
+        <img data-kervia-logo="true" src="brand/kervia-logo-ia-color-on-dark.svg" alt="Kervia">
+        <div class="product-name">K-CRM</div>
+        <div class="product-copy">carnet de relations</div>
+      </div>
+      <nav class="nav" aria-label="Navigation principale">
+        <button class="nav-btn" type="button" data-nav="dash" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg>Tableau de bord</button>
+        <button class="nav-btn" type="button" data-nav="today"><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg>Aujourd'hui<span class="count" data-count="today">0</span></button>
+        <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
+        <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects<span class="count" data-count="prospects">0</span></button>
+        <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients<span class="count" data-count="clients">0</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <strong>Un seul utilisateur</strong>
+        <span>Hervé · agents via MCP</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">
+          <small>K-CRM</small>
+          <strong id="pageTitle">Tableau de bord</strong>
+        </div>
+        <div class="top-actions">
+          <button class="search-btn" type="button" id="searchBtn" aria-label="Rechercher">
+            <svg class="icon" aria-hidden="true"><use href="#Search"/></svg>
+            <span>Rechercher une personne</span>
+            <kbd>/</kbd>
+          </button>
+          <button class="btn primary" type="button" id="newPersonBtn">
+            <svg class="icon" aria-hidden="true"><use href="#Plus"/></svg>
+            <span>Nouveau prospect</span>
+          </button>
+          <button class="icon-button" id="preferencesTrigger" type="button" aria-label="Ouvrir les préférences d'interface" aria-controls="preferences" aria-expanded="false">
+            <svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg>
+          </button>
+          <section class="preferences" id="preferences" aria-labelledby="preferencesTitle" hidden>
+            <h2 id="preferencesTitle">Interface</h2>
+            <p>Apparence et proportions. Carbon est le défaut sombre. Studio et Sable sont les options claires.</p>
+            <div class="setting">
+              <div class="setting-head"><strong>Style visuel</strong><span id="themeStatus">Carbon sélectionné</span></div>
+              <div class="swatches" role="group" aria-label="Style visuel">
+                <button class="swatch" type="button" data-theme-option="carbon" aria-label="Carbon" aria-pressed="true" style="--swatch:#b8e263"></button>
+                <button class="swatch" type="button" data-theme-option="atelier" aria-label="Atelier" aria-pressed="false" style="--swatch:#c6ac8f"></button>
+                <button class="swatch" type="button" data-theme-option="studio" aria-label="Studio" aria-pressed="false" style="--swatch:#eef0eb"></button>
+                <button class="swatch" type="button" data-theme-option="mineral" aria-label="Minérale" aria-pressed="false" style="--swatch:#7fd4b8"></button>
+                <button class="swatch" type="button" data-theme-option="sand" aria-label="Sable" aria-pressed="false" style="--swatch:#d5c8aa"></button>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-head"><strong>Taille de l'interface</strong><span id="sizeStatus">Standard sélectionnée</span></div>
+              <div class="size-group" role="group" aria-label="Taille de l'interface">
+                <button class="choice" type="button" data-size="s" aria-label="Interface compacte" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#Minimize2"/></svg></button>
+                <button class="choice" type="button" data-size="l" aria-label="Interface standard" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#Square"/></svg></button>
+                <button class="choice" type="button" data-size="xl" aria-label="Interface confortable" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#Maximize2"/></svg></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </header>
+
+      <div class="banner" role="status">
+        <strong>Preview NetBird. Données de développement.</strong>
+        Pas Twenty. Pas le live kervia.ch. L'UI n'a pas encore le wizard de connexion.
+      </div>
+
+      <div class="content" id="contenu">
+        <section class="view" id="view-dash">
+          <div class="view-head">
+            <div>
+              <h1>Tableau de bord</h1>
+              <p id="dashPeriod">Situation réelle, fichier SQLite local.</p>
+            </div>
+            <button class="btn primary" type="button" data-nav="today">Traiter les relances</button>
+          </div>
+          <div class="filters" data-filter-bar></div>
+          <div class="kpis" id="dashKpis"></div>
+          <div class="layout">
+            <article class="panel">
+              <div class="card-head">
+                <div>
+                  <h2>Relances de la semaine</h2>
+                  <p>Combien de suites tombent chaque jour. Unité: relances ouvertes.</p>
+                </div>
+              </div>
+              <div class="chart" id="dashChart" role="img" aria-labelledby="dashChartCaption"></div>
+              <p class="chart-caption" id="dashChartCaption">Mercredi est le pic (3). Weekend vide, volontaire.</p>
+              <table class="sr-only" id="dashChartTable">
+                <caption>Relances par jour</caption>
+                <thead><tr><th>Jour</th><th>Relances</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </article>
+            <aside class="panel">
+              <h2>Exceptions</h2>
+              <p>Ce qui casse le rythme, pas un score.</p>
+              <div class="stack" id="dashAlerts"></div>
+            </aside>
+          </div>
+          <div class="panel">
+            <h2>À traiter maintenant</h2>
+            <p>Même file que Aujourd'hui, bornée aux urgences.</p>
+            <div class="stack" id="dashNow"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-today" hidden>
+          <div class="view-head">
+            <div>
+              <h1>Relances du jour</h1>
+              <p>Le moteur: en retard d'abord, puis aujourd'hui, puis les prospects sans suite.</p>
+            </div>
+          </div>
+          <div class="filters" data-filter-bar></div>
+          <div class="layout">
+            <div class="stack" id="todayList"></div>
+            <aside class="panel" id="todayDetail" aria-live="polite"></aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-chrono" hidden>
+          <div class="view-head">
+            <div>
+              <h1>Chrono</h1>
+              <p>Une ligne. Les jours sont des jalons, les gens des nœuds.</p>
+            </div>
+          </div>
+          <div class="filters" data-filter-bar></div>
+          <div id="chronoList" class="chrono"></div>
+        </section>
+
+        <section class="view" id="view-prospects" hidden>
+          <div class="view-head">
+            <div>
+              <h1>Prospects</h1>
+              <p>Monde séparé. Un prospect sans relance future est cassé.</p>
+            </div>
+            <button class="btn primary" type="button" id="newPersonBtn2">Nouveau prospect</button>
+          </div>
+          <div class="filters" data-filter-bar></div>
+          <div class="stack" id="prospectList"></div>
+        </section>
+
+        <section class="view" id="view-clients" hidden>
+          <div class="view-head">
+            <div>
+              <h1>Clients</h1>
+              <p>Lead validé seulement. Le suivi n'est pas obligatoire.</p>
+            </div>
+          </div>
+          <div class="filters" data-filter-bar></div>
+          <div class="stack" id="clientList"></div>
+        </section>
+
+        <section class="view" id="view-person" hidden>
+          <div class="view-head">
+            <div>
+              <h1 id="personTitle">Fiche</h1>
+              <p id="personSub"></p>
+            </div>
+            <button class="btn ghost" type="button" data-nav="today">Retour</button>
+          </div>
+          <div class="layout">
+            <article class="panel" id="personScene"></article>
+            <aside class="panel" id="personActions"></aside>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navigation mobile">
+    <button class="nav-btn" type="button" data-nav="dash" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg>Tableau</button>
+    <button class="nav-btn" type="button" data-nav="today"><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg>Relances</button>
+    <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
+    <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects</button>
+    <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients</button>
+  </nav>
+
+  <div class="overlay" id="dialog" hidden>
+    <form class="dialog" id="dialogForm">
+      <h2 id="dialogTitle">Action</h2>
+      <p id="dialogCopy"></p>
+      <div class="field" id="dialogFieldWrap">
+        <label for="dialogField">Nouvelle date</label>
+        <input id="dialogField" name="value" type="date">
+      </div>
+      <div class="field" id="dialogWhyWrap" hidden>
+        <label for="dialogWhy">Pourquoi</label>
+        <input id="dialogWhy" name="why">
+      </div>
+      <div class="field" id="dialogNoteWrap" hidden>
+        <label for="dialogNote">Note</label>
+        <textarea id="dialogNote" name="note" rows="4"></textarea>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn ghost" type="button" id="dialogCancel">Annuler</button>
+        <button class="btn primary" type="submit" id="dialogOk">Confirmer</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="overlay" id="create" hidden>
+    <form class="dialog" id="createForm">
+      <h2>Nouveau prospect</h2>
+      <p>Toujours un prospect. Client seulement après validation du lead. Une relance à venir est obligatoire.</p>
+      <div class="form-grid">
+        <div class="field"><label for="cName">Nom</label><input id="cName" name="name" required autocomplete="name"></div>
+        <div class="field"><label for="cOrg">Organisation</label><input id="cOrg" name="org"></div>
+        <div class="field"><label for="cPole">Pôle</label>
+          <select id="cPole" name="pole" required>
+            <option value="Kervia">Kervia</option>
+            <option value="Exonik">Exonik</option>
+            <option value="EmoSana">EmoSana</option>
+            <option value="OP3">OP3</option>
+            <option value="perso">perso</option>
+          </select>
+        </div>
+        <div class="field"><label for="cPhone">Téléphone</label><input id="cPhone" name="phone" type="tel"></div>
+        <div class="field"><label for="cMail">E-mail</label><input id="cMail" name="email" type="email"></div>
+        <div class="field full"><label for="cLead">Besoin, une phrase</label><input id="cLead" name="lead" required></div>
+        <div class="field"><label for="cWhen">Première relance</label><input id="cWhen" name="when" type="date" required></div>
+        <div class="field"><label for="cWhy">Pourquoi relancer</label><input id="cWhy" name="why" required></div>
+      </div>
+      <p class="form-error" id="createError" aria-live="polite"></p>
+      <div class="dialog-foot">
+        <button class="btn ghost" type="button" id="createCancel">Annuler</button>
+        <button class="btn primary" type="submit">Créer le prospect</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="overlay" id="palette" hidden>
+    <div class="dialog palette" role="dialog" aria-label="Action rapide">
+      <input id="paletteInput" type="search" placeholder="Personne, verbe, vue" autocomplete="off">
+      <p class="palette-hint">N nouveau · 1 fait demain · Esc ferme</p>
+      <div class="palette-list" id="paletteList"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden role="status"></div>
+  <p class="sr-only" id="interfaceAnnouncement" aria-live="polite"></p>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -91,3 +91,50 @@ func TestValidateLeadAndNote(t *testing.T) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestRelanceLostAndSearch(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	p, err := s.CreateProspect(Person{Name: "Nora"}, "2026-09-16", "appel", "tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CompleteRelance(p.ID, "", "x", "tel"); err == nil {
+		t.Fatal("prospect complete without next should fail")
+	}
+	if _, err := s.CompleteRelance(p.ID, "2026-09-20", "suite devis", "mail"); err != nil {
+		t.Fatal(err)
+	}
+	day := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	ah, err := s.AujourdHui(day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ah.Overdue) != 0 || len(ah.Today) != 0 {
+		t.Fatalf("after complete overdue=%d today=%d", len(ah.Overdue), len(ah.Today))
+	}
+	hits, err := s.Search("Nora")
+	if err != nil || len(hits) != 1 {
+		t.Fatalf("search=%v err=%v", hits, err)
+	}
+	if _, err := s.MarkLost(p.ID, "pas de budget"); err != nil {
+		t.Fatal(err)
+	}
+	ah, err = s.AujourdHui(day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ah.Orphans) != 0 {
+		t.Fatalf("lost should not be orphan: %v", ah.Orphans)
+	}
+	st, err := s.Snapshot(day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.People) != 1 || st.People[0].When != "none" || st.People[0].LeadState != "perdu" {
+		t.Fatalf("snapshot=%+v", st.People)
+	}
+}
