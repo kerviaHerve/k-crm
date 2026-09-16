@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/httpapi"
 	"brain.op3.ch/sun221/k-crm/internal/mcp"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
@@ -47,7 +48,15 @@ func run(args []string) error {
 	defer st.Close()
 	switch cmd {
 	case "mcp":
-		return (&mcp.Server{Store: st}).Serve(os.Stdin, os.Stdout)
+		token, err := loadOrCreateToken(filepath.Join(*dataDir, "token"))
+		if err != nil {
+			return err
+		}
+		keys, err := agentkeys.Open(*dataDir, token)
+		if err != nil {
+			return err
+		}
+		return (&mcp.Server{Store: st, Keys: keys}).Serve(os.Stdin, os.Stdout)
 	case "serve":
 		if err := rejectWildcard(*listen); err != nil {
 			return err
@@ -56,11 +65,15 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
+		keys, err := agentkeys.Open(*dataDir, token)
+		if err != nil {
+			return err
+		}
 		cfg, err := setup.Open(*dataDir)
 		if err != nil {
 			return err
 		}
-		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg}
+		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, DataDir: *dataDir}
 		ln, err := net.Listen("tcp", *listen)
 		if err != nil {
 			return err

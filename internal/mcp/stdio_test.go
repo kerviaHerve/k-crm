@@ -109,7 +109,8 @@ func TestMCPListsEveryVerb(t *testing.T) {
 	for _, name := range []string{
 		"crm_aujourd_hui", "crm_creer_personne", "crm_fiche", "crm_noter", "crm_valider_lead",
 		"crm_marquer_perdu", "crm_relancer", "crm_reporter", "crm_attendre", "crm_modifier",
-		"crm_chercher", "crm_importer", "crm_exporter", "crm_etat",
+		"crm_chercher", "crm_cles_lister", "crm_cles_creer", "crm_cles_revoquer",
+		"crm_importer", "crm_exporter", "crm_etat",
 	} {
 		if !strings.Contains(body, name) {
 			t.Fatalf("missing %s in tools/list: %s", name, body)

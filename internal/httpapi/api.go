@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
+	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/catalog"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
@@ -15,12 +15,15 @@ import (
 )
 
 type Server struct {
-	Store    *store.Store
-	Token    string
-	Now      func() time.Time
-	Setup    *setup.File
-	pending  *setup.Pending
-	sessions *sync.Map
+	Store       *store.Store
+	Token       string
+	Now         func() time.Time
+	Setup       *setup.File
+	Keys        *agentkeys.Store
+	DataDir     string
+	pending     *setup.Pending
+	pendingTOTP string
+	sessions    *sync.Map
 }
 
 type createBody struct {
@@ -89,14 +92,29 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/tools/crm_exporter", s.auth(s.exportTool))
 	mux.HandleFunc("POST /api/v1/tools/crm_etat", s.auth(s.state))
 	mux.HandleFunc("GET /api/v1/config", s.auth(s.publicConfig))
+	mux.HandleFunc("GET /ui/api/settings", s.settingsMe)
+	mux.HandleFunc("POST /ui/api/settings/password", s.changePassword)
+	mux.HandleFunc("POST /ui/api/settings/totp/start", s.totpStart)
+	mux.HandleFunc("POST /ui/api/settings/totp/confirm", s.totpConfirm)
+	mux.HandleFunc("GET /ui/api/avatar", s.avatarGet)
+	mux.HandleFunc("POST /ui/api/avatar", s.avatarUpload)
+	mux.HandleFunc("GET /ui/api/keys", s.keysList)
+	mux.HandleFunc("POST /ui/api/keys", s.keysCreate)
+	mux.HandleFunc("DELETE /ui/api/keys/{id}", s.keysRevoke)
+	mux.HandleFunc("GET /api/v1/keys", s.auth(s.keysList))
+	mux.HandleFunc("POST /api/v1/keys", s.auth(s.keysCreate))
+	mux.HandleFunc("DELETE /api/v1/keys/{id}", s.auth(s.keysRevoke))
+	mux.HandleFunc("POST /api/v1/tools/crm_cles_lister", s.auth(s.keysList))
+	mux.HandleFunc("POST /api/v1/tools/crm_cles_creer", s.auth(s.keysCreateTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_cles_revoquer", s.auth(s.keysRevokeTool))
 	webui.Mount(mux, s.Store, s.now)
 	return s.gate(mux)
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if s.Token == "" || got != s.Token {
+		got := r.Header.Get("Authorization")
+		if !s.bearerOK(got) {
 			writeErr(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}

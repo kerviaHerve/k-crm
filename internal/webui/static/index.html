@@ -42,8 +42,11 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="brand-product">
-        <div class="product-name">K-CRM</div>
-        <div class="product-copy">pupitre</div>
+        <img class="owner-avatar" id="ownerAvatar" alt="" hidden>
+        <div>
+          <div class="product-name">K-CRM</div>
+          <div class="product-copy">pupitre</div>
+        </div>
       </div>
       <nav class="nav" aria-label="Navigation principale">
         <button class="nav-btn" type="button" data-nav="dash" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg>Tableau de bord</button>
@@ -51,6 +54,7 @@
         <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
         <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects<span class="count" data-count="prospects">0</span></button>
         <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients<span class="count" data-count="clients">0</span></button>
+        <button class="nav-btn" type="button" data-nav="settings"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg>Réglages</button>
       </nav>
       <div class="sidebar-foot">
         <strong>Un seul utilisateur</strong>
@@ -197,6 +201,81 @@
             <aside class="panel" id="personActions"></aside>
           </div>
         </section>
+
+        <section class="view" id="view-settings" hidden>
+          <div class="view-head">
+            <div>
+              <h1>Réglages</h1>
+              <p>Toi, le 2FA, les clés agent. Rien d’une équipe.</p>
+            </div>
+            <button class="btn ghost" type="button" id="logoutBtn">Se déconnecter</button>
+          </div>
+          <div class="settings-grid">
+            <article class="panel">
+              <h2>Profil</h2>
+              <p>Identifiant unique. L’avatar s’affiche dans la barre.</p>
+              <div class="avatar-row">
+                <img class="owner-avatar lg" id="settingsAvatar" alt="" hidden>
+                <div class="avatar-fallback" id="settingsAvatarFallback">H</div>
+                <div>
+                  <p class="setting-id" id="settingsUser">—</p>
+                  <button class="btn" type="button" id="avatarPick">Choisir une photo</button>
+                  <input id="avatarFile" type="file" accept="image/jpeg,image/png" hidden>
+                </div>
+              </div>
+              <p class="form-error" id="avatarErr" aria-live="polite"></p>
+            </article>
+
+            <article class="panel">
+              <h2>Ambiance</h2>
+              <p>Sombre par défaut, papier en option.</p>
+              <div class="swatches" role="group" aria-label="Ambiance">
+                <button class="chip-btn" type="button" data-theme-option="dark" aria-pressed="true">Sombre</button>
+                <button class="chip-btn" type="button" data-theme-option="light" aria-pressed="false">Papier</button>
+              </div>
+            </article>
+
+            <article class="panel">
+              <h2>Mot de passe</h2>
+              <p>Dix caractères minimum. Le code 2FA confirme le changement.</p>
+              <form class="gate-form" id="passwordForm">
+                <div class="field"><label for="pwCurrent">Actuel</label><input id="pwCurrent" type="password" required autocomplete="current-password"></div>
+                <div class="field"><label for="pwNext">Nouveau</label><input id="pwNext" type="password" required minlength="10" autocomplete="new-password"></div>
+                <div class="field"><label for="pwCode">Code 2FA</label><input id="pwCode" inputmode="numeric" maxlength="6" required></div>
+                <p class="form-error" id="pwErr" aria-live="polite"></p>
+                <button class="btn primary" type="submit">Changer le mot de passe</button>
+              </form>
+            </article>
+
+            <article class="panel">
+              <h2>2FA</h2>
+              <p>Obligatoire. Un nouvel authenticator remplace l’ancien après confirmation.</p>
+              <form class="gate-form" id="totpStartForm">
+                <div class="field"><label for="totpPass">Mot de passe</label><input id="totpPass" type="password" required></div>
+                <div class="field"><label for="totpOld">Code actuel</label><input id="totpOld" inputmode="numeric" maxlength="6" required></div>
+                <button class="btn" type="submit">Générer un nouveau secret</button>
+              </form>
+              <form class="gate-form" id="totpConfirmForm" hidden>
+                <p class="secret-box" id="totpSecret"></p>
+                <div class="field"><label for="totpNew">Nouveau code</label><input id="totpNew" inputmode="numeric" maxlength="6" required></div>
+                <button class="btn primary" type="submit">Activer ce 2FA</button>
+              </form>
+              <p class="form-error" id="totpErr" aria-live="polite"></p>
+            </article>
+
+            <article class="panel settings-wide">
+              <h2>Clés agent</h2>
+              <p>API et MCP. Le secret n’apparaît qu’une fois. Il en faut au moins une.</p>
+              <form class="key-create" id="keyForm">
+                <div class="field"><label for="keyName">Nom</label><input id="keyName" required placeholder="rita, hermes, mac…"></div>
+                <button class="btn primary" type="submit">Créer une clé</button>
+              </form>
+              <p class="secret-box" id="keyOnce" hidden></p>
+              <div class="stack" id="keyList"></div>
+              <p class="form-error" id="keyErr" aria-live="polite"></p>
+            </article>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -264,7 +343,7 @@
 
   <div class="overlay" id="palette" hidden>
     <div class="dialog palette" role="dialog" aria-label="Action rapide">
-      <input id="paletteInput" type="search" placeholder="Personne, verbe, vue" autocomplete="off">
+      <input id="paletteInput" type="search" placeholder="Nom, note, téléphone, verbe…" autocomplete="off">
       <p class="palette-hint">N nouveau · 1 fait demain · Esc ferme</p>
       <div class="palette-list" id="paletteList"></div>
     </div>

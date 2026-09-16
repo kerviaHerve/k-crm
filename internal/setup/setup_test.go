@@ -72,4 +72,13 @@ func TestWizardCommitAndLogin(t *testing.T) {
 	if f.Public().PasswordHash != "" || f.Public().TOTPSecret != "" {
 		t.Fatal("public leaked secrets")
 	}
+	if err := f.ChangePassword("correcthorse", "newhorsebattery", code, now); err != nil {
+		t.Fatal(err)
+	}
+	if f.Verify("herve", "correcthorse", code, now) {
+		t.Fatal("old password still valid")
+	}
+	if !f.Verify("herve", "newhorsebattery", code, now) {
+		t.Fatal("new password rejected")
+	}
 }

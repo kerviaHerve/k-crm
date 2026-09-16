@@ -33,12 +33,21 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 			q = body.Query
 		}
 	}
-	hits, err := s.Store.Search(q)
+	hits, err := s.Store.SearchHits(q)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "store")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"people": hits})
+	people := make([]store.Person, 0, len(hits))
+	seen := map[string]bool{}
+	for _, h := range hits {
+		if seen[h.ID] {
+			continue
+		}
+		seen[h.ID] = true
+		people = append(people, h.Person)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"q": q, "hits": hits, "people": people})
 }
 
 func (s *Server) markLost(w http.ResponseWriter, r *http.Request) {

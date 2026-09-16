@@ -78,7 +78,31 @@ button { touch-action: manipulation; cursor: pointer; }
     );
 }
 
-.brand-product img { display: none; }
+.brand-product { display: flex; align-items: center; gap: 12px; }
+.owner-avatar {
+  width: 40px; height: 40px; object-fit: cover;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.owner-avatar.lg { width: 72px; height: 72px; }
+.avatar-fallback {
+  width: 72px; height: 72px; display: grid; place-items: center;
+  border: 1px solid var(--line); background: var(--copper); color: var(--copper-ink);
+  font: 700 22px/1 var(--display);
+}
+.avatar-row { display: flex; align-items: center; gap: 16px; }
+.setting-id { margin: 0 0 8px; font: 600 20px/1.2 var(--display); }
+.settings-grid {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.settings-wide { grid-column: 1 / -1; }
+.key-create { display: flex; gap: 8px; align-items: end; }
+.key-create .field { flex: 1; margin: 0; }
+.key-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line);
+}
+.key-row code { color: var(--mute); font-size: 12px; }
 .product-name {
   margin: 0;
   font: 700 28px/0.9 var(--display);

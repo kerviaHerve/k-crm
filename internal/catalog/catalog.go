@@ -81,9 +81,28 @@ func All() []Tool {
 		},
 		{
 			Name:        "crm_chercher",
-			Description: "Recherche des personnes par nom, org, pole ou lead.",
+			Description: "Recherche puissante: nom, org, pole, lead, telephone, email, notes. Accents ignores. Jetons AND.",
 			HTTP:        []string{"GET /api/v1/people?q=", "POST /api/v1/tools/crm_chercher"},
 			Properties:  map[string]any{"q": str, "query": str},
+		},
+		{
+			Name:        "crm_cles_lister",
+			Description: "Liste les cles agent (sans secret).",
+			HTTP:        []string{"GET /api/v1/keys", "POST /api/v1/tools/crm_cles_lister"},
+		},
+		{
+			Name:        "crm_cles_creer",
+			Description: "Cree une cle agent nommee. Le secret n'apparait qu'une fois.",
+			HTTP:        []string{"POST /api/v1/keys", "POST /api/v1/tools/crm_cles_creer"},
+			Required:    []string{"name"},
+			Properties:  map[string]any{"name": str},
+		},
+		{
+			Name:        "crm_cles_revoquer",
+			Description: "Revoque une cle agent. Il doit en rester au moins une.",
+			HTTP:        []string{"DELETE /api/v1/keys/{id}", "POST /api/v1/tools/crm_cles_revoquer"},
+			Required:    []string{"id"},
+			Properties:  map[string]any{"id": str},
 		},
 		{
 			Name:        "crm_importer",

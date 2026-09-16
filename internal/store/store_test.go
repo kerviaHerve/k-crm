@@ -187,3 +187,30 @@ func TestImportProspectsNeverCreatesClient(t *testing.T) {
 		t.Fatalf("ada=%v err=%v", hits, err)
 	}
 }
+
+func TestSearchHitsNotesAndAccents(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	p, err := s.CreateProspect(Person{Name: "Léa Morel", Org: "Atelier Nord", Phone: "021 555 12 12"}, "2026-09-20", "devis", "tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AddNote(p.ID, "Appel", "Ils rappellent pour le cuivre"); err != nil {
+		t.Fatal(err)
+	}
+	byName, err := s.SearchHits("lea")
+	if err != nil || len(byName) != 1 || byName[0].Match != "nom" {
+		t.Fatalf("accent %+v err=%v", byName, err)
+	}
+	byNote, err := s.SearchHits("cuivre")
+	if err != nil || len(byNote) != 1 || byNote[0].Match != "note" {
+		t.Fatalf("note %+v err=%v", byNote, err)
+	}
+	byPhone, err := s.SearchHits("021555")
+	if err != nil || len(byPhone) != 1 {
+		t.Fatalf("phone %+v err=%v", byPhone, err)
+	}
+}

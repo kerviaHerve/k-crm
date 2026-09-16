@@ -1,6 +1,6 @@
 const themeNames = { carbon: "Carbon", atelier: "Atelier", studio: "Studio", mineral: "Minérale", sand: "Sable" };
 const sizeNames = { s: "Compacte", l: "Standard", xl: "Confortable" };
-const titles = { dash: "Tableau de bord", today: "Aujourd'hui", chrono: "Chrono", prospects: "Prospects", clients: "Clients", person: "Fiche" };
+const titles = { dash: "Tableau de bord", today: "Aujourd'hui", chrono: "Chrono", prospects: "Prospects", clients: "Clients", person: "Fiche", settings: "Réglages" };
 const POLES = ["Kervia", "Exonik", "EmoSana", "OP3", "perso"];
 
 let people = [];
@@ -317,6 +317,7 @@ function showView(name, id) {
   if (name === "chrono") renderChrono();
   if (name === "prospects" || name === "clients") renderLists();
   if (name === "person") renderPerson(selectedId);
+  if (name === "settings") loadSettings();
   renderFilters();
   counts();
 }
@@ -427,8 +428,8 @@ function openPalette() {
 
 function closePalette() { $("palette").hidden = true; }
 
-function renderPalette() {
-  const q = ($("paletteInput").value || "").trim().toLowerCase();
+async function renderPalette() {
+  const q = ($("paletteInput").value || "").trim();
   const verbs = [
     { label: "Nouveau prospect", sub: "N", run: () => openCreate() },
     { label: "Exporter CSV", sub: "sauvegarde", run: () => { closePalette(); window.location.href = "/ui/api/export.csv"; } },
@@ -437,19 +438,34 @@ function renderPalette() {
     { label: "Aujourd'hui", sub: "vue", run: () => showView("today") },
     { label: "Chrono", sub: "vue", run: () => showView("chrono") },
     { label: "Prospects", sub: "vue", run: () => showView("prospects") },
-    { label: "Clients", sub: "vue", run: () => showView("clients") }
+    { label: "Clients", sub: "vue", run: () => showView("clients") },
+    { label: "Réglages", sub: "vue", run: () => showView("settings") }
   ];
-  const hits = [
-    ...verbs.filter((v) => v.label.toLowerCase().includes(q)),
-    ...people.filter((p) => `${p.name} ${p.org} ${p.pole}`.toLowerCase().includes(q))
+  const qn = q.toLowerCase();
+  const hits = verbs.filter((v) => !qn || v.label.toLowerCase().includes(qn));
+  if (q.length >= 2) {
+    try {
+      const r = await fetch(`/ui/api/search?q=${encodeURIComponent(q)}`);
+      const data = await r.json();
+      (data.hits || []).slice(0, 8).forEach((h) => {
+        hits.push({
+          label: h.name,
+          sub: `${h.match || "fiche"}${h.snippet ? " · " + h.snippet : ""}`,
+          run: () => showView("person", h.id)
+        });
+      });
+    } catch (_) {}
+  } else if (q) {
+    people.filter((p) => `${p.name} ${p.org} ${p.pole}`.toLowerCase().includes(qn))
       .slice(0, 8)
-      .map((p) => ({ label: p.name, sub: `${p.org} · ${p.pole}`, run: () => showView("person", p.id) }))
-  ].slice(0, 10);
-  $("paletteList").innerHTML = hits.map((h, i) => `
+      .forEach((p) => hits.push({ label: p.name, sub: `${p.org} · ${p.pole}`, run: () => showView("person", p.id) }));
+  }
+  const shown = hits.slice(0, 12);
+  $("paletteList").innerHTML = shown.map((h, i) => `
     <button class="palette-item" type="button" data-palette="${i}" ${i === 0 ? "data-first" : ""}>
       <b>${esc(h.label)}</b><small>${esc(h.sub)}</small>
     </button>`).join("") || `<p class="empty">Aucun résultat.</p>`;
-  renderPalette._hits = hits;
+  renderPalette._hits = shown;
 }
 
 let editId = null;
@@ -536,15 +552,13 @@ document.querySelectorAll("[data-theme-option]").forEach((btn) => {
 
 const trigger = $("preferencesTrigger");
 const preferences = $("preferences");
-trigger.addEventListener("click", () => {
-  const open = preferences.hidden;
-  preferences.hidden = !open;
-  trigger.setAttribute("aria-expanded", String(open));
-});
+if (trigger) {
+  trigger.addEventListener("click", () => showView("settings"));
+}
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    if (!preferences.hidden) { preferences.hidden = true; trigger.setAttribute("aria-expanded", "false"); trigger.focus(); }
+    if (preferences && !preferences.hidden) { preferences.hidden = true; trigger?.setAttribute("aria-expanded", "false"); trigger?.focus(); }
     if (!$("create").hidden) closeCreate();
     if (!$("dialog").hidden) closeDialog();
     if (!$("palette").hidden) closePalette();
@@ -564,7 +578,10 @@ document.addEventListener("keydown", (event) => {
     if (first) quick(first.id, "done", 1);
   }
 });
-$("paletteInput").addEventListener("input", renderPalette);
+$("paletteInput").addEventListener("input", () => {
+  clearTimeout(renderPalette._t);
+  renderPalette._t = setTimeout(renderPalette, 120);
+});
 $("paletteList").addEventListener("click", (event) => {
   const btn = event.target.closest("[data-palette]");
   if (!btn) return;
@@ -573,7 +590,7 @@ $("paletteList").addEventListener("click", (event) => {
 });
 
 document.addEventListener("pointerdown", (event) => {
-  if (!preferences.hidden && !preferences.contains(event.target) && !trigger.contains(event.target)) {
+  if (preferences && !preferences.hidden && !preferences.contains(event.target) && !trigger.contains(event.target)) {
     preferences.hidden = true;
     trigger.setAttribute("aria-expanded", "false");
   }
@@ -627,5 +644,144 @@ $("importFile").addEventListener("change", async (event) => {
   }
 });
 
+function setAvatar(has) {
+  ["ownerAvatar", "settingsAvatar"].forEach((id) => {
+    const img = $(id);
+    if (!img) return;
+    if (has) {
+      img.src = `/ui/api/avatar?t=${Date.now()}`;
+      img.hidden = false;
+    } else {
+      img.hidden = true;
+    }
+  });
+  const fb = $("settingsAvatarFallback");
+  if (fb) fb.hidden = !!has;
+}
+
+function renderKeys(keys) {
+  const list = $("keyList");
+  if (!list) return;
+  list.innerHTML = (keys || []).map((k) => `
+    <div class="key-row">
+      <div>
+        <strong>${esc(k.name)}</strong>
+        <div><code>${esc(k.prefix)}…</code></div>
+      </div>
+      <button class="btn ghost" type="button" data-revoke="${esc(k.id)}">Révoquer</button>
+    </div>`).join("") || `<p class="empty">Aucune clé.</p>`;
+}
+
+async function loadSettings() {
+  try {
+    const data = await api("GET", "/ui/api/settings");
+    $("settingsUser").textContent = data.user || "—";
+    const fb = $("settingsAvatarFallback");
+    if (fb) fb.textContent = (data.user || "?").slice(0, 1).toUpperCase();
+    setAvatar(!!data.has_avatar);
+    renderKeys(data.keys);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+$("logoutBtn")?.addEventListener("click", async () => {
+  try { await api("POST", "/logout"); } catch (_) {}
+  location.href = "/login";
+});
+$("avatarPick")?.addEventListener("click", () => $("avatarFile").click());
+$("avatarFile")?.addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  const data = new FormData();
+  data.append("file", file);
+  $("avatarErr").textContent = "";
+  try {
+    const r = await fetch("/ui/api/avatar", { method: "POST", body: data });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || "avatar");
+    setAvatar(true);
+    toast("Avatar enregistré.");
+  } catch (err) {
+    $("avatarErr").textContent = err.message;
+  }
+});
+$("passwordForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("pwErr").textContent = "";
+  try {
+    await api("POST", "/ui/api/settings/password", {
+      current: $("pwCurrent").value,
+      next: $("pwNext").value,
+      code: $("pwCode").value.trim()
+    });
+    $("passwordForm").reset();
+    toast("Mot de passe changé.");
+  } catch (err) {
+    $("pwErr").textContent = err.message;
+  }
+});
+$("totpStartForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("totpErr").textContent = "";
+  try {
+    const data = await api("POST", "/ui/api/settings/totp/start", {
+      password: $("totpPass").value,
+      code: $("totpOld").value.trim()
+    });
+    $("totpSecret").textContent = data.secret;
+    $("totpConfirmForm").hidden = false;
+    $("totpNew").focus();
+  } catch (err) {
+    $("totpErr").textContent = err.message;
+  }
+});
+$("totpConfirmForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("totpErr").textContent = "";
+  try {
+    await api("POST", "/ui/api/settings/totp/confirm", { code: $("totpNew").value.trim() });
+    $("totpStartForm").reset();
+    $("totpConfirmForm").reset();
+    $("totpConfirmForm").hidden = true;
+    toast("Nouveau 2FA actif.");
+  } catch (err) {
+    $("totpErr").textContent = err.message;
+  }
+});
+$("keyForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("keyErr").textContent = "";
+  try {
+    const out = await api("POST", "/ui/api/keys", { name: $("keyName").value.trim() });
+    $("keyName").value = "";
+    $("keyOnce").hidden = false;
+    $("keyOnce").textContent = out.token;
+    await loadSettings();
+    toast("Clé créée. Copie-la maintenant.");
+  } catch (err) {
+    $("keyErr").textContent = err.message;
+  }
+});
+$("keyList")?.addEventListener("click", async (event) => {
+  const btn = event.target.closest("[data-revoke]");
+  if (!btn) return;
+  $("keyErr").textContent = "";
+  try {
+    const r = await fetch(`/ui/api/keys/${btn.dataset.revoke}`, { method: "DELETE" });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || "revoke");
+    $("keyOnce").hidden = true;
+    await loadSettings();
+    toast("Clé révoquée.");
+  } catch (err) {
+    $("keyErr").textContent = err.message;
+  }
+});
+
 setTheme(document.documentElement.dataset.theme);
-loadState().then(() => showView("today")).catch((err) => toast(err.message));
+loadState().then(() => {
+  fetch("/ui/api/settings").then((r) => r.json()).then((d) => setAvatar(!!d.has_avatar)).catch(() => {});
+  showView("today");
+}).catch((err) => toast(err.message));

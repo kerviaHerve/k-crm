@@ -143,6 +143,47 @@ func (f *File) TokenAlreadyShown() bool {
 	return f.cfg.TokenShown
 }
 
+func (f *File) ChangePassword(current, next, totp string, now time.Time) error {
+	f.mu.Lock()
+	hash, secret := f.cfg.PasswordHash, f.cfg.TOTPSecret
+	done := f.cfg.Done
+	f.mu.Unlock()
+	if !done {
+		return fmt.Errorf("wizard required")
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(current)) != nil || !VerifyTOTP(secret, totp, now) {
+		return fmt.Errorf("invalid credentials")
+	}
+	newHash, err := HashPassword(next)
+	if err != nil {
+		return err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cfg.PasswordHash = newHash
+	return f.saveLocked()
+}
+
+func (f *File) ReplaceTOTP(secret string) error {
+	secret = strings.TrimSpace(secret)
+	if secret == "" {
+		return fmt.Errorf("totp required")
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cfg.TOTPSecret = secret
+	return f.saveLocked()
+}
+
+func (f *File) VerifyPassword(password string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.cfg.Done {
+		return false
+	}
+	return bcrypt.CompareHashAndPassword([]byte(f.cfg.PasswordHash), []byte(password)) == nil
+}
+
 func (f *File) saveLocked() error {
 	b, err := json.MarshalIndent(f.cfg, "", "  ")
 	if err != nil {

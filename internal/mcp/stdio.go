@@ -10,12 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/catalog"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
 
 type Server struct {
 	Store *store.Store
+	Keys  *agentkeys.Store
 	Now   func() time.Time
 }
 
@@ -190,17 +192,62 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 		}
 		return textResult(person)
 	case "crm_chercher":
-		var args struct{ Q string }
+		var args struct {
+			Q     string `json:"q"`
+			Query string `json:"query"`
+		}
 		if len(p.Arguments) > 0 {
 			if err := json.Unmarshal(p.Arguments, &args); err != nil {
 				return nil, err
 			}
 		}
-		hits, err := s.Store.Search(args.Q)
+		q := args.Q
+		if q == "" {
+			q = args.Query
+		}
+		hits, err := s.Store.SearchHits(q)
 		if err != nil {
 			return nil, err
 		}
 		return textResult(hits)
+	case "crm_cles_lister":
+		if s.Keys == nil {
+			return textResult([]any{})
+		}
+		return textResult(s.Keys.List())
+	case "crm_cles_creer":
+		if s.Keys == nil {
+			return nil, fmt.Errorf("keys")
+		}
+		var args struct {
+			Name string `json:"name"`
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		k, plain, err := s.Keys.Create(args.Name)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(map[string]any{"key": k, "token": plain})
+	case "crm_cles_revoquer":
+		if s.Keys == nil {
+			return nil, fmt.Errorf("keys")
+		}
+		var args struct {
+			ID string `json:"id"`
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		if err := s.Keys.Revoke(args.ID); err != nil {
+			return nil, err
+		}
+		return textResult(map[string]any{"ok": true})
 	case "crm_importer":
 		var args struct {
 			CSV string `json:"csv"`

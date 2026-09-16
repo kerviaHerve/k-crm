@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -215,18 +216,207 @@ func (s *Store) MarkLost(id, why string) (Person, error) {
 }
 
 func (s *Store) Search(q string) ([]Person, error) {
+	hits, err := s.SearchHits(q)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Person, 0, len(hits))
+	seen := map[string]bool{}
+	for _, h := range hits {
+		if seen[h.ID] {
+			continue
+		}
+		seen[h.ID] = true
+		out = append(out, h.Person)
+	}
+	return out, nil
+}
+
+type SearchHit struct {
+	Person
+	Score   int    `json:"score"`
+	Match   string `json:"match"`
+	Snippet string `json:"snippet,omitempty"`
+}
+
+func fold(s string) string {
+	r := strings.NewReplacer(
+		"é", "e", "è", "e", "ê", "e", "ë", "e",
+		"à", "a", "â", "a", "ä", "a",
+		"î", "i", "ï", "i",
+		"ô", "o", "ö", "o",
+		"ù", "u", "û", "u", "ü", "u",
+		"ç", "c", "œ", "oe", "æ", "ae",
+		"É", "e", "È", "e", "Ê", "e", "Ë", "e",
+		"À", "a", "Â", "a", "Ä", "a",
+		"Î", "i", "Ï", "i",
+		"Ô", "o", "Ö", "o",
+		"Ù", "u", "Û", "u", "Ü", "u",
+		"Ç", "c",
+	)
+	return strings.ToLower(r.Replace(s))
+}
+
+func digits(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func snippet(text, token string) string {
+	low := fold(text)
+	i := strings.Index(low, token)
+	if i < 0 {
+		if len(text) > 80 {
+			return text[:80] + "…"
+		}
+		return text
+	}
+	start := i - 24
+	if start < 0 {
+		start = 0
+	}
+	end := i + len(token) + 32
+	runes := []rune(text)
+	if end > len(runes) {
+		end = len(runes)
+	}
+	if start > len(runes) {
+		start = 0
+	}
+	out := string(runes[start:end])
+	if start > 0 {
+		out = "…" + out
+	}
+	if end < len(runes) {
+		out += "…"
+	}
+	return out
+}
+
+func (s *Store) SearchHits(q string) ([]SearchHit, error) {
 	q = strings.TrimSpace(q)
 	if q == "" {
-		return []Person{}, nil
+		return []SearchHit{}, nil
 	}
-	like := "%" + q + "%"
-	return s.queryPeople(`
+	tokens := strings.Fields(fold(q))
+	if len(tokens) == 0 {
+		return []SearchHit{}, nil
+	}
+	people, err := s.queryPeople(`
 SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
        COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
 FROM people p
 LEFT JOIN relances r ON r.person_id=p.id AND r.open=1
-WHERE p.name LIKE ? OR p.org LIKE ? OR p.pole LIKE ? OR p.lead LIKE ? OR p.phone LIKE ? OR p.email LIKE ?
-ORDER BY p.name`, like, like, like, like, like, like)
+ORDER BY p.name`)
+	if err != nil {
+		return nil, err
+	}
+	notesBy := map[string][]Note{}
+	rows, err := s.db.Query(`SELECT id,person_id,title,body,created_at FROM notes`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var n Note
+		if err := rows.Scan(&n.ID, &n.PersonID, &n.Title, &n.Body, &n.CreatedAt); err != nil {
+			return nil, err
+		}
+		notesBy[n.PersonID] = append(notesBy[n.PersonID], n)
+	}
+	var hits []SearchHit
+	for _, p := range people {
+		best := SearchHit{Person: p, Score: -1}
+		hay := map[string]string{
+			"nom":     p.Name,
+			"org":     p.Org,
+			"pole":    p.Pole,
+			"lead":    p.Lead,
+			"email":   p.Email,
+			"phone":   p.Phone,
+			"relance": p.Why,
+			"etat":    p.LeadState + " " + p.World,
+		}
+		ok := true
+		for _, tok := range tokens {
+			matched := false
+			for field, val := range hay {
+				fv := fold(val)
+				if fv == "" {
+					continue
+				}
+				score := 0
+				snip := ""
+				switch {
+				case fv == tok && field == "nom":
+					score = 100
+				case strings.HasPrefix(fv, tok) && field == "nom":
+					score = 80
+				case strings.Contains(fv, tok) && field == "nom":
+					score = 60
+					snip = snippet(val, tok)
+				case field == "phone" && strings.Contains(digits(val), digits(tok)) && digits(tok) != "":
+					score = 50
+					snip = val
+				case strings.Contains(fv, tok):
+					score = 40
+					if field == "org" || field == "lead" {
+						score = 45
+					}
+					snip = snippet(val, tok)
+				}
+				if score > 0 {
+					matched = true
+					if score > best.Score {
+						best.Score = score
+						best.Match = field
+						best.Snippet = snip
+					}
+				}
+			}
+			for _, n := range notesBy[p.ID] {
+				blob := fold(n.Title + " " + n.Body)
+				if strings.Contains(blob, tok) {
+					matched = true
+					score := 22
+					if strings.Contains(fold(n.Title), tok) {
+						score = 28
+					}
+					if score > best.Score {
+						best.Score = score
+						best.Match = "note"
+						best.Snippet = snippet(n.Title+": "+n.Body, tok)
+					}
+				}
+			}
+			if !matched {
+				ok = false
+				break
+			}
+		}
+		if ok && best.Score >= 0 {
+			hits = append(hits, best)
+		}
+	}
+	sortHits(hits)
+	if len(hits) > 50 {
+		hits = hits[:50]
+	}
+	return hits, nil
+}
+
+func sortHits(hits []SearchHit) {
+	sort.Slice(hits, func(i, j int) bool {
+		if hits[i].Score != hits[j].Score {
+			return hits[i].Score > hits[j].Score
+		}
+		return hits[i].Name < hits[j].Name
+	})
 }
 
 func (s *Store) ListWorld(world string) ([]Person, error) {
