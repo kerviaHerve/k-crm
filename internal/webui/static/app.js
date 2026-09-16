@@ -23,17 +23,16 @@ function isoShift(days) {
 }
 
 function setTheme(value) {
-  const themes = ["carbon", "atelier", "studio", "mineral", "sand"];
-  if (!themes.includes(value)) value = "carbon";
-  document.documentElement.dataset.kerviaTheme = value;
-  try { localStorage.setItem("kervia-ui-theme", value); } catch (_) {}
+  const theme = value === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem("kcrm-alt-theme", theme); } catch (_) {}
   document.querySelectorAll("[data-theme-option]").forEach((btn) => {
-    btn.setAttribute("aria-pressed", String(btn.dataset.themeOption === value));
+    btn.setAttribute("aria-pressed", String(btn.dataset.themeOption === theme));
   });
   const status = $("themeStatus");
-  if (status) status.textContent = `${themeNames[value]} sélectionné`;
+  if (status) status.textContent = theme === "light" ? "Papier" : "Sombre";
   const live = $("interfaceAnnouncement");
-  if (live) live.textContent = `Style ${themeNames[value]}`;
+  if (live) live.textContent = theme === "light" ? "Ambiance papier" : "Ambiance sombre";
 }
 
 function setSize(value, focusButton = false) {
@@ -116,8 +115,7 @@ function relanceCard(p, withActions) {
       ${p.when === "orphan"
         ? `<button class="btn primary" type="button" data-act="plan" data-id="${p.id}">Poser une relance</button>`
         : `<button class="btn primary" type="button" data-quick="done" data-days="1" data-id="${p.id}">Fait, demain</button>
-           <button class="btn" type="button" data-quick="snooze" data-days="3" data-id="${p.id}">+3 j</button>
-           <button class="btn" type="button" data-act="done" data-id="${p.id}">Fait</button>`}
+           <button class="btn" type="button" data-quick="snooze" data-days="3" data-id="${p.id}">+3 j</button>`}
       ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="validate" data-id="${p.id}">Valider</button>` : ""}
     </div>` : `<div class="actions">${whenChip(p.when, p.whenLabel)}</div>`;
   return `
@@ -534,20 +532,6 @@ async function createProspect(event) {
 document.querySelectorAll("[data-theme-option]").forEach((btn) => {
   btn.addEventListener("click", () => setTheme(btn.dataset.themeOption));
 });
-document.querySelectorAll("[data-size]").forEach((btn) => {
-  btn.addEventListener("click", () => setSize(btn.dataset.size, true));
-});
-document.querySelector(".size-group").addEventListener("keydown", (event) => {
-  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-  event.preventDefault();
-  const order = ["s", "l", "xl"];
-  let index = order.indexOf(document.documentElement.dataset.kerviaSize);
-  if (event.key === "ArrowLeft") index = (index + 2) % 3;
-  if (event.key === "ArrowRight") index = (index + 1) % 3;
-  if (event.key === "Home") index = 0;
-  if (event.key === "End") index = 2;
-  setSize(order[index], true);
-});
 
 const trigger = $("preferencesTrigger");
 const preferences = $("preferences");
@@ -626,6 +610,5 @@ $("createCancel").addEventListener("click", closeCreate);
 $("create").addEventListener("click", (event) => { if (event.target === $("create")) closeCreate(); });
 $("createForm").addEventListener("submit", createProspect);
 
-setTheme(document.documentElement.dataset.kerviaTheme);
-setSize(document.documentElement.dataset.kerviaSize);
-loadState().then(() => showView("dash")).catch((err) => toast(err.message));
+setTheme(document.documentElement.dataset.theme);
+loadState().then(() => showView("today")).catch((err) => toast(err.message));

@@ -54,7 +54,7 @@ func (s *Server) gate(next http.Handler) http.Handler {
 }
 
 func isPublicAsset(path string) bool {
-	return path == "/kervia.css" || path == "/fonts.css" || path == "/app.css" || path == "/install.js" || path == "/login.js" ||
+	return path == "/pupitre.css" || path == "/kervia.css" || path == "/fonts.css" || path == "/app.css" || path == "/install.js" || path == "/login.js" ||
 		strings.HasPrefix(path, "/fonts/") || strings.HasPrefix(path, "/brand/")
 }
 

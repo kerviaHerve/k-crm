@@ -1,27 +1,20 @@
 <!doctype html>
-<html lang="fr-CH" data-kervia-theme="carbon" data-kervia-size="l">
+<html lang="fr-CH" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>K-CRM</title>
   <script>
     (() => {
-      const themes = ["carbon", "atelier", "studio", "mineral", "sand"];
-      const sizes = ["s", "l", "xl"];
       try {
-        const theme = localStorage.getItem("kervia-ui-theme");
-        const size = localStorage.getItem("kervia-ui-size");
-        document.documentElement.dataset.kerviaTheme = themes.includes(theme) ? theme : "carbon";
-        document.documentElement.dataset.kerviaSize = sizes.includes(size) ? size : "l";
+        const theme = localStorage.getItem("kcrm-alt-theme");
+        document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
       } catch (_) {
-        document.documentElement.dataset.kerviaTheme = "carbon";
-        document.documentElement.dataset.kerviaSize = "l";
+        document.documentElement.dataset.theme = "dark";
       }
     })();
   </script>
-  <link rel="stylesheet" href="fonts.css">
-  <link rel="stylesheet" href="kervia.css">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="pupitre.css">
 </head>
 <body>
   <svg width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -49,9 +42,8 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="brand-product">
-        <img data-kervia-logo="true" src="brand/kervia-logo-ia-color-on-dark.svg" alt="Kervia">
         <div class="product-name">K-CRM</div>
-        <div class="product-copy">carnet de relations</div>
+        <div class="product-copy">pupitre</div>
       </div>
       <nav class="nav" aria-label="Navigation principale">
         <button class="nav-btn" type="button" data-nav="dash" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg>Tableau de bord</button>
@@ -69,13 +61,13 @@
     <main class="main">
       <header class="topbar">
         <div class="crumb">
-          <small>K-CRM</small>
+          <small>Pupitre</small>
           <strong id="pageTitle">Tableau de bord</strong>
         </div>
         <div class="top-actions">
           <button class="search-btn" type="button" id="searchBtn" aria-label="Rechercher">
             <svg class="icon" aria-hidden="true"><use href="#Search"/></svg>
-            <span>Rechercher une personne</span>
+            <span>Action rapide</span>
             <kbd>/</kbd>
           </button>
           <button class="btn primary" type="button" id="newPersonBtn">
@@ -87,23 +79,12 @@
           </button>
           <section class="preferences" id="preferences" aria-labelledby="preferencesTitle" hidden>
             <h2 id="preferencesTitle">Interface</h2>
-            <p>Apparence et proportions. Carbon est le défaut sombre. Studio et Sable sont les options claires.</p>
+            <p>Sombre par défaut, papier en option. Pas les cinq thèmes Kervia.</p>
             <div class="setting">
-              <div class="setting-head"><strong>Style visuel</strong><span id="themeStatus">Carbon sélectionné</span></div>
-              <div class="swatches" role="group" aria-label="Style visuel">
-                <button class="swatch" type="button" data-theme-option="carbon" aria-label="Carbon" aria-pressed="true" style="--swatch:#b8e263"></button>
-                <button class="swatch" type="button" data-theme-option="atelier" aria-label="Atelier" aria-pressed="false" style="--swatch:#c6ac8f"></button>
-                <button class="swatch" type="button" data-theme-option="studio" aria-label="Studio" aria-pressed="false" style="--swatch:#eef0eb"></button>
-                <button class="swatch" type="button" data-theme-option="mineral" aria-label="Minérale" aria-pressed="false" style="--swatch:#7fd4b8"></button>
-                <button class="swatch" type="button" data-theme-option="sand" aria-label="Sable" aria-pressed="false" style="--swatch:#d5c8aa"></button>
-              </div>
-            </div>
-            <div class="setting">
-              <div class="setting-head"><strong>Taille de l'interface</strong><span id="sizeStatus">Standard sélectionnée</span></div>
-              <div class="size-group" role="group" aria-label="Taille de l'interface">
-                <button class="choice" type="button" data-size="s" aria-label="Interface compacte" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#Minimize2"/></svg></button>
-                <button class="choice" type="button" data-size="l" aria-label="Interface standard" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#Square"/></svg></button>
-                <button class="choice" type="button" data-size="xl" aria-label="Interface confortable" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#Maximize2"/></svg></button>
+              <div class="setting-head"><strong>Ambiance</strong><span id="themeStatus">Sombre</span></div>
+              <div class="swatches" role="group" aria-label="Ambiance">
+                <button class="chip-btn" type="button" data-theme-option="dark" aria-pressed="true">Sombre</button>
+                <button class="chip-btn" type="button" data-theme-option="light" aria-pressed="false">Papier</button>
               </div>
             </div>
           </section>
@@ -112,7 +93,7 @@
 
       <div class="banner" role="status">
         <strong>Preview NetBird. Données de développement.</strong>
-        Pas Twenty. Pas le live kervia.ch. L'UI n'a pas encore le wizard de connexion.
+        Peau pupitre (cuivre). Pas Twenty. Pas le live kervia.ch.
       </div>
 
       <div class="content" id="contenu">

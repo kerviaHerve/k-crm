@@ -26,6 +26,7 @@ func Mount(mux *http.ServeMux, _ *store.Store, _ func() time.Time) {
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, root, "index.html")
 	})
+	mux.Handle("GET /pupitre.css", files)
 	mux.Handle("GET /app.js", files)
 	mux.Handle("GET /app.css", files)
 	mux.Handle("GET /fonts.css", files)
