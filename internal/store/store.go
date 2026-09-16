@@ -94,10 +94,28 @@ CREATE INDEX IF NOT EXISTS relances_open_due ON relances(open, due);
 }
 
 func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, error) {
+	p.Name = strings.TrimSpace(p.Name)
+	due = strings.TrimSpace(due)
+	why = strings.TrimSpace(why)
+	if p.Name == "" {
+		return Person{}, fmt.Errorf("name required")
+	}
+	if due == "" {
+		return Person{}, fmt.Errorf("prospect requires a relance date")
+	}
+	if _, err := time.Parse("2006-01-02", due); err != nil {
+		return Person{}, fmt.Errorf("due must be YYYY-MM-DD")
+	}
+	if why == "" {
+		return Person{}, fmt.Errorf("relance why required")
+	}
 	p.ID = ids.New()
 	p.World = "prospect"
 	if p.LeadState == "" {
 		p.LeadState = "nouveau"
+	}
+	if channel == "" {
+		channel = "tel"
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	tx, err := s.db.Begin()
@@ -112,12 +130,6 @@ func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, erro
 	)
 	if err != nil {
 		return Person{}, err
-	}
-	if strings.TrimSpace(due) == "" {
-		return Person{}, fmt.Errorf("prospect requires a relance date")
-	}
-	if channel == "" {
-		channel = "tel"
 	}
 	_, err = tx.Exec(
 		`INSERT INTO relances (id,person_id,due,channel,why,open,created_at) VALUES (?,?,?,?,?,1,?)`,

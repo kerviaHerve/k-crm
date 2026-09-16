@@ -52,4 +52,7 @@ func TestCreateProspectRejectsEmptyDue(t *testing.T) {
 	if _, err := s.CreateProspect(Person{Name: "X"}, "", "why", "tel"); err == nil {
 		t.Fatal("expected error")
 	}
+	if _, err := s.CreateProspect(Person{Name: "X"}, "2026-09-16", "", "tel"); err == nil {
+		t.Fatal("expected why error")
+	}
 }

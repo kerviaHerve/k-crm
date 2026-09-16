@@ -28,11 +28,13 @@ Le meme verbe existe a la souris et en API.
 - API JSON, jeton Bearer (fichier `data/token`, mode 0600)
 - Bind explicite, refus de `0.0.0.0`
 
-## Verbes (lot 1)
+## Verbes (lot 2)
 
 - `crm_aujourd_hui` : `GET /api/v1/aujourd-hui`
+- `crm_creer_personne` : `POST /api/v1/prospects` (due + why obligatoires, toujours prospect)
 - Catalogue: `GET /api/v1/tools`
 - Sante: `GET /healthz` (sans jeton)
+- MCP stdio: `k-crm mcp -data ./data`
 
 ## Lancer
 

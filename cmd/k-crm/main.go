@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"brain.op3.ch/sun221/k-crm/internal/httpapi"
+	"brain.op3.ch/sun221/k-crm/internal/mcp"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
 
@@ -24,20 +25,18 @@ func main() {
 }
 
 func run(args []string) error {
+	cmd := "serve"
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		cmd = args[0]
+		args = args[1:]
+	}
 	fs := flag.NewFlagSet("k-crm", flag.ContinueOnError)
 	listen := fs.String("listen", "127.0.0.1:8740", "ip:port, loopback by default")
 	dataDir := fs.String("data", "./data", "directory for sqlite and token")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if err := rejectWildcard(*listen); err != nil {
-		return err
-	}
 	if err := os.MkdirAll(*dataDir, 0o700); err != nil {
-		return err
-	}
-	token, err := loadOrCreateToken(filepath.Join(*dataDir, "token"))
-	if err != nil {
 		return err
 	}
 	st, err := store.Open(filepath.Join(*dataDir, "k-crm.db"))
@@ -45,14 +44,28 @@ func run(args []string) error {
 		return err
 	}
 	defer st.Close()
-	srv := &httpapi.Server{Store: st, Token: token}
-	ln, err := net.Listen("tcp", *listen)
-	if err != nil {
-		return err
+	switch cmd {
+	case "mcp":
+		return (&mcp.Server{Store: st}).Serve(os.Stdin, os.Stdout)
+	case "serve":
+		if err := rejectWildcard(*listen); err != nil {
+			return err
+		}
+		token, err := loadOrCreateToken(filepath.Join(*dataDir, "token"))
+		if err != nil {
+			return err
+		}
+		srv := &httpapi.Server{Store: st, Token: token}
+		ln, err := net.Listen("tcp", *listen)
+		if err != nil {
+			return err
+		}
+		log.Printf("k-crm listen %s", ln.Addr())
+		log.Printf("token file %s", filepath.Join(*dataDir, "token"))
+		return http.Serve(ln, srv.Routes())
+	default:
+		return fmt.Errorf("unknown command %q (serve|mcp)", cmd)
 	}
-	log.Printf("k-crm listen %s", ln.Addr())
-	log.Printf("token file %s", filepath.Join(*dataDir, "token"))
-	return http.Serve(ln, srv.Routes())
 }
 
 func rejectWildcard(listen string) error {

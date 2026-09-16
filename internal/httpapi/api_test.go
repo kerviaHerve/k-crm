@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,6 +54,30 @@ func TestAujourdHuiJSON(t *testing.T) {
 	}
 	if len(out.Overdue) != 1 || out.Overdue[0].Name != "Lea" {
 		t.Fatalf("overdue=%v", out.Overdue)
+	}
+}
+
+func TestCreateProspectHTTP(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	srv := &Server{Store: st, Token: "secret-test"}
+	body := `{"name":"Lea","pole":"Exonik","due":"2026-09-16","why":"devis"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/prospects", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer secret-test")
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/prospects", strings.NewReader(`{"name":"X"}`))
+	req2.Header.Set("Authorization", "Bearer secret-test")
+	rec2 := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec2.Code)
 	}
 }
 
