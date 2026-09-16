@@ -421,3 +421,65 @@ button { touch-action: manipulation; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
 }
+
+.gate-stage {
+  min-height: calc(100vh - 64px);
+  display: grid;
+  place-items: center;
+  padding: 32px 28px 48px;
+}
+.gate-card {
+  width: min(420px, 100%);
+  padding: 28px 0 8px;
+}
+.gate-card .overline {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--copper);
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 650;
+}
+.gate-card h1 {
+  margin: 10px 0 0;
+  font: 650 40px/0.95 var(--display);
+  letter-spacing: -0.035em;
+}
+.gate-card .intro { margin: 10px 0 28px; color: var(--mute); max-width: 36rem; }
+.gate-form { display: grid; gap: 18px; }
+.gate-form .field input {
+  min-height: 44px;
+  font-size: 16px;
+}
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 48px; }
+.pw-toggle {
+  position: absolute; right: 0; top: 0;
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--mute);
+}
+.gate-submit {
+  width: 100%; min-height: 44px;
+  margin-top: 4px;
+}
+.gate-note {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 22px; color: var(--mute); font-size: 12px;
+}
+.step-dots { display: flex; gap: 6px; margin: 0 0 18px; }
+.step-dots span {
+  width: 28px; height: 3px; background: var(--line);
+}
+.step-dots span[aria-current="true"] { background: var(--copper); }
+.secret-box {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  color: var(--fg);
+}
+.gate-card .dialog-foot { justify-content: stretch; margin-top: 8px; }
+.gate-card .dialog-foot .btn { flex: 1; min-height: 44px; }
+@media (max-width: 767px) {
+  .gate-stage { min-height: calc(100vh - 58px); padding: 20px 16px 32px; }
+}
