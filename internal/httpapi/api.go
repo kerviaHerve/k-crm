@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"brain.op3.ch/sun221/k-crm/internal/store"
+	"brain.op3.ch/sun221/k-crm/internal/webui"
 )
 
 type Server struct {
@@ -48,6 +49,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/people/{id}/validate", s.auth(s.validateLead))
 	mux.HandleFunc("POST /api/v1/tools/crm_noter", s.auth(s.addNoteTool))
 	mux.HandleFunc("POST /api/v1/tools/crm_valider_lead", s.auth(s.validateLeadTool))
+	webui.Mount(mux, s.Store, s.now)
 	return mux
 }
 

@@ -43,7 +43,7 @@ Le meme verbe existe a la souris et en API.
 
 ```bash
 export PATH="/home/op3/.local/share/go1.26.5/bin:$PATH"
-go run ./cmd/k-crm -listen 127.0.0.1:8740 -data ./data
+go run ./cmd/k-crm serve -listen 127.0.0.1:8740 -data ./data
 ```
 
 Le jeton n'est pas affiche. Il est dans `./data/token`.
