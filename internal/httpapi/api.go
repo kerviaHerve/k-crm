@@ -5,16 +5,21 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
+	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 	"brain.op3.ch/sun221/k-crm/internal/webui"
 )
 
 type Server struct {
-	Store *store.Store
-	Token string
-	Now   func() time.Time
+	Store    *store.Store
+	Token    string
+	Now      func() time.Time
+	Setup    *setup.File
+	pending  *setup.Pending
+	sessions *sync.Map
 }
 
 type createBody struct {
@@ -39,6 +44,12 @@ func (s *Server) now() time.Time {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.healthz)
+	mux.HandleFunc("GET /install", s.installPage)
+	mux.HandleFunc("POST /install/start", s.installStart)
+	mux.HandleFunc("POST /install/confirm", s.installConfirm)
+	mux.HandleFunc("GET /login", s.loginPage)
+	mux.HandleFunc("POST /login", s.login)
+	mux.HandleFunc("POST /logout", s.logout)
 	mux.HandleFunc("GET /api/v1/tools", s.auth(s.tools))
 	mux.HandleFunc("GET /api/v1/aujourd-hui", s.auth(s.aujourdHui))
 	mux.HandleFunc("POST /api/v1/tools/crm_aujourd_hui", s.auth(s.aujourdHui))
@@ -69,7 +80,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /ui/api/export.csv", s.exportCSV)
 	mux.HandleFunc("GET /api/v1/export.csv", s.auth(s.exportCSV))
 	webui.Mount(mux, s.Store, s.now)
-	return mux
+	return s.gate(mux)
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {

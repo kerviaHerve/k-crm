@@ -14,6 +14,7 @@ import (
 
 	"brain.op3.ch/sun221/k-crm/internal/httpapi"
 	"brain.op3.ch/sun221/k-crm/internal/mcp"
+	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
 
@@ -55,13 +56,20 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		srv := &httpapi.Server{Store: st, Token: token}
+		cfg, err := setup.Open(*dataDir)
+		if err != nil {
+			return err
+		}
+		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg}
 		ln, err := net.Listen("tcp", *listen)
 		if err != nil {
 			return err
 		}
 		log.Printf("k-crm listen %s", ln.Addr())
 		log.Printf("token file %s", filepath.Join(*dataDir, "token"))
+		if !cfg.Done() {
+			log.Printf("wizard pending on /install")
+		}
 		return http.Serve(ln, srv.Routes())
 	default:
 		return fmt.Errorf("unknown command %q (serve|mcp)", cmd)

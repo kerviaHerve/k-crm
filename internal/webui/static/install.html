@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr" data-kervia-theme="carbon" data-kervia-size="l">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>K-CRM · Installer</title>
+  <link rel="stylesheet" href="/fonts.css">
+  <link rel="stylesheet" href="/kervia.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <p class="banner">Wizard d'install. Un seul utilisateur. 2FA obligatoire. Pas Twenty.</p>
+  <header>
+    <img src="/brand/kervia-logo-ia-color-on-dark.svg" width="162" height="48" alt="Kervia">
+    <p class="product-name">K-CRM</p>
+  </header>
+  <main class="main" style="padding:24px;max-width:640px">
+    <h1>Installation</h1>
+    <p>Pas une doc. Ce formulaire est l'installeur.</p>
+    <p class="form-error" id="err" aria-live="polite"></p>
+    <form id="step1" class="dialog" style="position:static;max-width:none">
+      <h2>1. Exposition</h2>
+      <div class="field"><label for="listen">IP:port</label><input id="listen" required value="127.0.0.1:8740"></div>
+      <div class="field"><label for="domain">Nom de domaine</label><input id="domain" placeholder="crm.interne"></div>
+      <label><input type="checkbox" id="https"> Derrière un reverse proxy HTTPS</label>
+      <div class="dialog-foot"><button class="btn primary" type="submit">Compte</button></div>
+    </form>
+    <form id="step2" class="dialog" style="position:static;max-width:none" hidden>
+      <h2>2. Utilisateur unique</h2>
+      <div class="field"><label for="user">Identifiant</label><input id="user" required autocomplete="username"></div>
+      <div class="field"><label for="password">Mot de passe</label><input id="password" type="password" required minlength="10" autocomplete="new-password"></div>
+      <div class="dialog-foot"><button class="btn primary" type="submit">Activer le 2FA</button></div>
+    </form>
+    <form id="step3" class="dialog" style="position:static;max-width:none" hidden>
+      <h2>3. 2FA obligatoire</h2>
+      <p>Ajoute ce secret dans ton authenticator, puis entre le code à 6 chiffres.</p>
+      <p id="otpauth" style="word-break:break-all"></p>
+      <p><code id="secret"></code></p>
+      <div class="field"><label for="code">Code</label><input id="code" inputmode="numeric" pattern="[0-9]{6}" required></div>
+      <div class="dialog-foot"><button class="btn primary" type="submit">Confirmer</button></div>
+    </form>
+    <section id="done" hidden>
+      <h2>4. Jeton agent</h2>
+      <p>Affiché une seule fois. Copie-le. Il n'est plus jamais réaffiché.</p>
+      <p><code id="tokenOnce"></code></p>
+      <p><a class="btn primary" href="/">Ouvrir K-CRM</a></p>
+    </section>
+  </main>
+  <script>
+    const err = (m) => { document.getElementById("err").textContent = m || ""; };
+    const api = async (url, body) => {
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || r.status);
+      return data;
+    };
+    document.getElementById("step1").addEventListener("submit", (e) => {
+      e.preventDefault();
+      document.getElementById("step1").hidden = true;
+      document.getElementById("step2").hidden = false;
+    });
+    document.getElementById("step2").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      err("");
+      try {
+        const data = await api("/install/start", {
+          listen: document.getElementById("listen").value.trim(),
+          domain: document.getElementById("domain").value.trim(),
+          https: document.getElementById("https").checked,
+          user: document.getElementById("user").value.trim(),
+          password: document.getElementById("password").value
+        });
+        document.getElementById("otpauth").textContent = data.otpauth;
+        document.getElementById("secret").textContent = data.secret;
+        document.getElementById("step2").hidden = true;
+        document.getElementById("step3").hidden = false;
+      } catch (ex) { err(ex.message); }
+    });
+    document.getElementById("step3").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      err("");
+      try {
+        const data = await api("/install/confirm", { code: document.getElementById("code").value.trim() });
+        document.getElementById("step3").hidden = true;
+        document.getElementById("done").hidden = false;
+        document.getElementById("tokenOnce").textContent = data.token || "(déjà affiché)";
+      } catch (ex) { err(ex.message); }
+    });
+  </script>
+</body>
+</html>

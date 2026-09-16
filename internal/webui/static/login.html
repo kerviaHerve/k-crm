@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr" data-kervia-theme="carbon" data-kervia-size="l">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>K-CRM · Connexion</title>
+  <link rel="stylesheet" href="/fonts.css">
+  <link rel="stylesheet" href="/kervia.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <img src="/brand/kervia-logo-ia-color-on-dark.svg" width="162" height="48" alt="Kervia">
+    <p class="product-name">K-CRM</p>
+  </header>
+  <main class="main" style="padding:24px;max-width:480px">
+    <h1>Connexion</h1>
+    <p>Accédez à K-CRM avec votre identifiant et le 2FA.</p>
+    <p class="form-error" id="err" aria-live="polite"></p>
+    <form id="login" class="dialog" style="position:static;max-width:none">
+      <div class="field"><label for="user">Identifiant</label><input id="user" required autocomplete="username"></div>
+      <div class="field"><label for="password">Mot de passe</label><input id="password" type="password" required autocomplete="current-password"></div>
+      <div class="field"><label for="code">Code 2FA</label><input id="code" inputmode="numeric" pattern="[0-9]{6}" required></div>
+      <div class="dialog-foot"><button class="btn primary" type="submit">Connexion</button></div>
+    </form>
+  </main>
+  <script>
+    document.getElementById("login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err");
+      err.textContent = "";
+      const r = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: document.getElementById("user").value.trim(),
+          password: document.getElementById("password").value,
+          code: document.getElementById("code").value.trim()
+        })
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { err.textContent = data.error || "Connexion refusée"; return; }
+      location.href = "/";
+    });
+  </script>
+</body>
+</html>
