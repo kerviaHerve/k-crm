@@ -248,6 +248,20 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			return nil, err
 		}
 		return textResult(hits)
+	case "crm_importer":
+		var args struct {
+			CSV string `json:"csv"`
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		out, err := s.Store.ImportProspects(strings.NewReader(args.CSV))
+		if err != nil {
+			return nil, err
+		}
+		return textResult(out)
 	default:
 		return nil, fmt.Errorf("unknown tool")
 	}

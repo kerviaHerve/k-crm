@@ -79,6 +79,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/people/{id}", s.auth(s.updatePerson))
 	mux.HandleFunc("GET /ui/api/export.csv", s.exportCSV)
 	mux.HandleFunc("GET /api/v1/export.csv", s.auth(s.exportCSV))
+	mux.HandleFunc("POST /ui/api/import.csv", s.importCSV)
+	mux.HandleFunc("POST /api/v1/import.csv", s.auth(s.importCSV))
+	mux.HandleFunc("POST /api/v1/tools/crm_importer", s.auth(s.importCSV))
 	webui.Mount(mux, s.Store, s.now)
 	return s.gate(mux)
 }

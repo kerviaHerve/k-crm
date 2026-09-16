@@ -432,6 +432,7 @@ function renderPalette() {
   const verbs = [
     { label: "Nouveau prospect", sub: "N", run: () => openCreate() },
     { label: "Exporter CSV", sub: "sauvegarde", run: () => { closePalette(); window.location.href = "/ui/api/export.csv"; } },
+    { label: "Importer CSV", sub: "prospects", run: () => { closePalette(); $("importFile").click(); } },
     { label: "Tableau de bord", sub: "vue", run: () => showView("dash") },
     { label: "Aujourd'hui", sub: "vue", run: () => showView("today") },
     { label: "Chrono", sub: "vue", run: () => showView("chrono") },
@@ -609,6 +610,22 @@ $("newPersonBtn2").addEventListener("click", openCreate);
 $("createCancel").addEventListener("click", closeCreate);
 $("create").addEventListener("click", (event) => { if (event.target === $("create")) closeCreate(); });
 $("createForm").addEventListener("submit", createProspect);
+$("importFile").addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  const data = new FormData();
+  data.append("file", file);
+  try {
+    const r = await fetch("/ui/api/import.csv", { method: "POST", body: data });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || "import");
+    toast(`${out.created || 0} prospects créés, ${out.skipped || 0} ignorés.`);
+    await refresh("today");
+  } catch (err) {
+    toast(err.message);
+  }
+});
 
 setTheme(document.documentElement.dataset.theme);
 loadState().then(() => showView("today")).catch((err) => toast(err.message));

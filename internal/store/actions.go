@@ -1,7 +1,9 @@
 package store
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 	"unicode"
@@ -336,6 +338,76 @@ ORDER BY p.name`)
 	for i := 0; i < 7; i++ {
 		d := monday.AddDate(0, 0, i).Format("2006-01-02")
 		out.WeekLoad[i].N = counts[d]
+	}
+	return out, nil
+}
+
+type ImportError struct {
+	Line   int    `json:"line"`
+	Name   string `json:"name,omitempty"`
+	Reason string `json:"reason"`
+}
+
+type ImportResult struct {
+	Created int           `json:"created"`
+	Skipped int           `json:"skipped"`
+	Errors  []ImportError `json:"errors"`
+}
+
+func (s *Store) ImportProspects(r io.Reader) (ImportResult, error) {
+	cr := csv.NewReader(r)
+	cr.FieldsPerRecord = -1
+	cr.TrimLeadingSpace = true
+	head, err := cr.Read()
+	if err != nil {
+		return ImportResult{}, fmt.Errorf("csv header required")
+	}
+	idx := map[string]int{}
+	for i, h := range head {
+		idx[strings.ToLower(strings.TrimSpace(h))] = i
+	}
+	if _, ok := idx["name"]; !ok {
+		return ImportResult{}, fmt.Errorf("csv needs a name column")
+	}
+	out := ImportResult{Errors: []ImportError{}}
+	line := 1
+	for {
+		rec, err := cr.Read()
+		if err == io.EOF {
+			break
+		}
+		line++
+		if err != nil {
+			out.Skipped++
+			out.Errors = append(out.Errors, ImportError{Line: line, Reason: "bad row"})
+			continue
+		}
+		get := func(k string) string {
+			i, ok := idx[k]
+			if !ok || i >= len(rec) {
+				return ""
+			}
+			return strings.TrimSpace(rec[i])
+		}
+		p := Person{
+			Name:  get("name"),
+			Org:   get("org"),
+			Pole:  get("pole"),
+			Lead:  get("lead"),
+			Phone: get("phone"),
+			Email: get("email"),
+		}
+		due, why, channel := get("due"), get("why"), get("channel")
+		if _, err := s.CreateProspect(p, due, why, channel); err != nil {
+			out.Skipped++
+			out.Errors = append(out.Errors, ImportError{Line: line, Name: p.Name, Reason: err.Error()})
+			continue
+		}
+		out.Created++
+		if out.Created+out.Skipped >= 2000 {
+			out.Errors = append(out.Errors, ImportError{Line: line, Reason: "stopped at 2000 rows"})
+			break
+		}
 	}
 	return out, nil
 }

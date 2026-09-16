@@ -3,7 +3,9 @@ package httpapi
 import (
 	"encoding/csv"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
@@ -150,4 +152,27 @@ func (s *Server) exportCSV(w http.ResponseWriter, r *http.Request) {
 		_ = cw.Write([]string{p.ID, p.Name, p.Org, p.Pole, p.World, p.LeadState, p.Lead, p.Phone, p.Email, p.Due, p.Why, p.When})
 	}
 	cw.Flush()
+}
+
+func (s *Server) importCSV(w http.ResponseWriter, r *http.Request) {
+	var body io.Reader = r.Body
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+		if err := r.ParseMultipartForm(4 << 20); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid upload")
+			return
+		}
+		f, _, err := r.FormFile("file")
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "file required")
+			return
+		}
+		defer f.Close()
+		body = f
+	}
+	out, err := s.Store.ImportProspects(body)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
 }

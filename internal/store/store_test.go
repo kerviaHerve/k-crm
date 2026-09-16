@@ -2,6 +2,7 @@ package store
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -162,5 +163,27 @@ func TestUpdatePersonKeepsWorld(t *testing.T) {
 	}
 	if w.LeadState != "en attente" || w.Channel != "attente" {
 		t.Fatalf("wait %+v", w)
+	}
+}
+
+func TestImportProspectsNeverCreatesClient(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	csv := "name,org,pole,due,why,world\n" +
+		"Ada,Nord,Exonik,2026-09-20,appel,client\n" +
+		"Bad,Nord,Exonik,,missing why,prospect\n"
+	got, err := s.ImportProspects(strings.NewReader(csv))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Created != 1 || got.Skipped != 1 {
+		t.Fatalf("import %+v", got)
+	}
+	hits, err := s.Search("Ada")
+	if err != nil || len(hits) != 1 || hits[0].World != "prospect" {
+		t.Fatalf("ada=%v err=%v", hits, err)
 	}
 }
