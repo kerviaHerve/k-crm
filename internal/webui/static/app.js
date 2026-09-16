@@ -264,8 +264,10 @@ function renderPerson(id) {
     <p>${p.world === "prospect" ? "Tant que le lead n'est pas validé, cette fiche reste un prospect." : "Lead déjà validé. Relance optionnelle."}</p>
     <div class="stack">
       ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn primary" type="button" data-act="validate" data-id="${p.id}">Valider le lead</button>` : ""}
+      <button class="btn" type="button" data-act="edit" data-id="${p.id}">Modifier la fiche</button>
       <button class="btn" type="button" data-act="note" data-id="${p.id}">Ajouter une note</button>
       <button class="btn" type="button" data-act="${p.next ? "snooze" : "plan"}" data-id="${p.id}">${p.next ? "Reporter" : "Poser une relance"}</button>
+      ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="wait" data-id="${p.id}">En attente d'eux</button>` : ""}
       ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn danger" type="button" data-act="lost" data-id="${p.id}">Marquer perdu</button>` : ""}
     </div>`;
 }
@@ -327,6 +329,7 @@ async function refresh(view, id) {
 }
 
 function openDialog(action, id) {
+  if (action === "edit") { openEdit(id); return; }
   const p = person(id);
   dialogAction = { action, id };
   $("dialog").hidden = false;
@@ -351,6 +354,11 @@ function openDialog(action, id) {
     $("dialogTitle").textContent = "Note sur le fil";
     $("dialogCopy").textContent = "Une note libre. Ça n'est pas une relance.";
     $("dialogOk").textContent = "Ajouter";
+  } else if (action === "wait") {
+    $("dialogTitle").textContent = "En attente d'eux";
+    $("dialogCopy").textContent = "On attend leur retour. Une date de relance reste obligatoire.";
+    $("dialogWhy").value = p?.why || "En attente d'eux";
+    $("dialogOk").textContent = "Poser la date";
   } else if (action === "done") {
     $("dialogTitle").textContent = "Relance faite";
     $("dialogCopy").textContent = "Prospect: une relance faite exige la suivante.";
@@ -380,7 +388,7 @@ async function applyDialog() {
       const due = $("dialogField").value;
       const why = $("dialogWhy").value.trim();
       if (!due || !why) { $("dialogField").focus(); return false; }
-      const mode = action === "done" ? "complete" : "plan";
+      const mode = action === "done" ? "complete" : (action === "wait" ? "wait" : "plan");
       await api("POST", `/ui/api/people/${id}/relance`, { mode, due, why, channel: "tel" });
     }
     toast("Enregistré.");
@@ -425,6 +433,7 @@ function renderPalette() {
   const q = ($("paletteInput").value || "").trim().toLowerCase();
   const verbs = [
     { label: "Nouveau prospect", sub: "N", run: () => openCreate() },
+    { label: "Exporter CSV", sub: "sauvegarde", run: () => { closePalette(); window.location.href = "/ui/api/export.csv"; } },
     { label: "Tableau de bord", sub: "vue", run: () => showView("dash") },
     { label: "Aujourd'hui", sub: "vue", run: () => showView("today") },
     { label: "Chrono", sub: "vue", run: () => showView("chrono") },
@@ -444,19 +453,65 @@ function renderPalette() {
   renderPalette._hits = hits;
 }
 
+let editId = null;
+
 function openCreate() {
+  editId = null;
   closePalette();
   $("create").hidden = false;
   $("createError").textContent = "";
   $("createForm").reset();
+  $("createForm").querySelector("h2").textContent = "Nouveau prospect";
+  $("cWhen").required = true;
+  $("cWhy").required = true;
+  $("cLead").required = true;
+  $("cWhen").closest(".field").hidden = false;
+  $("cWhy").closest(".field").hidden = false;
   $("cWhen").value = isoShift(1);
   $("cName").focus();
 }
-function closeCreate() { $("create").hidden = true; }
+
+function openEdit(id) {
+  const p = person(id);
+  if (!p) return;
+  editId = id;
+  closePalette();
+  $("create").hidden = false;
+  $("createError").textContent = "";
+  $("createForm").querySelector("h2").textContent = "Modifier la fiche";
+  $("cName").value = p.name || "";
+  $("cOrg").value = p.org || "";
+  $("cPole").value = p.pole || "Kervia";
+  $("cPhone").value = p.phone || "";
+  $("cMail").value = p.email || "";
+  $("cLead").value = p.lead || "";
+  $("cWhen").required = false;
+  $("cWhy").required = false;
+  $("cLead").required = false;
+  $("cWhen").closest(".field").hidden = true;
+  $("cWhy").closest(".field").hidden = true;
+  $("cName").focus();
+}
+
+function closeCreate() { $("create").hidden = true; editId = null; }
 
 async function createProspect(event) {
   event.preventDefault();
   try {
+    if (editId) {
+      const updated = await api("POST", `/ui/api/people/${editId}`, {
+        name: $("cName").value.trim(),
+        org: $("cOrg").value.trim(),
+        pole: $("cPole").value,
+        phone: $("cPhone").value.trim(),
+        email: $("cMail").value.trim(),
+        lead: $("cLead").value.trim()
+      });
+      closeCreate();
+      toast(`${updated.name} mis à jour.`);
+      await refresh("person", updated.id);
+      return;
+    }
     const created = await api("POST", "/ui/api/prospects", {
       name: $("cName").value.trim(),
       org: $("cOrg").value.trim(),

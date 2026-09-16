@@ -64,6 +64,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /ui/api/people/{id}/validate", s.validateLead)
 	mux.HandleFunc("POST /ui/api/people/{id}/lost", s.markLost)
 	mux.HandleFunc("POST /ui/api/people/{id}/relance", s.relance)
+	mux.HandleFunc("POST /ui/api/people/{id}", s.updatePerson)
+	mux.HandleFunc("POST /api/v1/people/{id}", s.auth(s.updatePerson))
+	mux.HandleFunc("GET /ui/api/export.csv", s.exportCSV)
+	mux.HandleFunc("GET /api/v1/export.csv", s.auth(s.exportCSV))
 	webui.Mount(mux, s.Store, s.now)
 	return mux
 }

@@ -100,6 +100,24 @@ func (s *Store) PlanRelance(personID, due, why, channel string) (Person, error) 
 	return p, nil
 }
 
+func (s *Store) WaitOnThem(id, due, why string) (Person, error) {
+	if strings.TrimSpace(why) == "" {
+		why = "En attente d'eux"
+	}
+	p, err := s.PlanRelance(id, due, why, "attente")
+	if err != nil {
+		return Person{}, err
+	}
+	if p.World == "prospect" && p.LeadState != "perdu" {
+		if _, err := s.db.Exec(`UPDATE people SET lead_state='en attente' WHERE id=?`, id); err != nil {
+			return Person{}, err
+		}
+		p.LeadState = "en attente"
+	}
+	p.Channel = "attente"
+	return p, nil
+}
+
 func (s *Store) CompleteRelance(personID, due, why, channel string) (Person, error) {
 	p, err := s.GetPerson(personID)
 	if err != nil {

@@ -176,6 +176,25 @@ FROM people WHERE id=?`, id)
 	return p, err
 }
 
+func (s *Store) UpdatePerson(id string, in Person) (Person, error) {
+	cur, err := s.GetPerson(id)
+	if err != nil {
+		return Person{}, err
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		return Person{}, fmt.Errorf("name required")
+	}
+	_, err = s.db.Exec(`UPDATE people SET name=?, org=?, pole=?, lead=?, phone=?, email=? WHERE id=?`,
+		name, strings.TrimSpace(in.Org), strings.TrimSpace(in.Pole), strings.TrimSpace(in.Lead),
+		strings.TrimSpace(in.Phone), strings.TrimSpace(in.Email), id)
+	if err != nil {
+		return Person{}, err
+	}
+	cur.Name, cur.Org, cur.Pole, cur.Lead, cur.Phone, cur.Email = name, strings.TrimSpace(in.Org), strings.TrimSpace(in.Pole), strings.TrimSpace(in.Lead), strings.TrimSpace(in.Phone), strings.TrimSpace(in.Email)
+	return cur, nil
+}
+
 func (s *Store) Notes(personID string) ([]Note, error) {
 	rows, err := s.db.Query(`SELECT id,person_id,title,body,created_at FROM notes WHERE person_id=? ORDER BY created_at DESC`, personID)
 	if err != nil {

@@ -138,3 +138,29 @@ func TestRelanceLostAndSearch(t *testing.T) {
 		t.Fatalf("snapshot=%+v", st.People)
 	}
 }
+
+func TestUpdatePersonKeepsWorld(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	p, err := s.CreateProspect(Person{Name: "Nora"}, "2026-09-20", "appel", "tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.UpdatePerson(p.ID, Person{Name: "Nora Rey", Org: "Rey", Pole: "OP3", World: "client", LeadState: "validé", Lead: "audit"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.World != "prospect" || got.Name != "Nora Rey" || got.Pole != "OP3" {
+		t.Fatalf("got %+v", got)
+	}
+	w, err := s.WaitOnThem(p.ID, "2026-09-22", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.LeadState != "en attente" || w.Channel != "attente" {
+		t.Fatalf("wait %+v", w)
+	}
+}

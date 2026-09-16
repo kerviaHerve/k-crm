@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 
@@ -106,6 +107,8 @@ func (s *Server) applyRelance(w http.ResponseWriter, id, mode, due, why, channel
 	switch mode {
 	case "complete":
 		p, err = s.Store.CompleteRelance(id, due, why, channel)
+	case "wait":
+		p, err = s.Store.WaitOnThem(id, due, why)
 	default:
 		p, err = s.Store.PlanRelance(id, due, why, channel)
 	}
@@ -114,4 +117,37 @@ func (s *Server) applyRelance(w http.ResponseWriter, id, mode, due, why, channel
 		return
 	}
 	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) updatePerson(w http.ResponseWriter, r *http.Request) {
+	var body createBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	p, err := s.Store.UpdatePerson(r.PathValue("id"), store.Person{
+		Name: body.Name, Org: body.Org, Pole: body.Pole, Lead: body.Lead,
+		Phone: body.Phone, Email: body.Email,
+	})
+	if err != nil {
+		storeHTTP(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) exportCSV(w http.ResponseWriter, r *http.Request) {
+	st, err := s.Store.Snapshot(s.now())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store")
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"k-crm.csv\"")
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"id", "name", "org", "pole", "world", "lead_state", "lead", "phone", "email", "due", "why", "when"})
+	for _, p := range st.People {
+		_ = cw.Write([]string{p.ID, p.Name, p.Org, p.Pole, p.World, p.LeadState, p.Lead, p.Phone, p.Email, p.Due, p.Why, p.When})
+	}
+	cw.Flush()
 }
