@@ -90,3 +90,29 @@ func TestNoteAndValidateTools(t *testing.T) {
 		t.Fatalf("missing validate: %s", body)
 	}
 }
+
+func TestMCPListsEveryVerb(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	in := bytes.Join([][]byte{
+		frame(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": map[string]any{}}),
+		frame(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}),
+	}, nil)
+	var out bytes.Buffer
+	if err := (&Server{Store: st}).Serve(bytes.NewReader(in), &out); err != nil {
+		t.Fatal(err)
+	}
+	body := out.String()
+	for _, name := range []string{
+		"crm_aujourd_hui", "crm_creer_personne", "crm_fiche", "crm_noter", "crm_valider_lead",
+		"crm_marquer_perdu", "crm_relancer", "crm_reporter", "crm_attendre", "crm_modifier",
+		"crm_chercher", "crm_importer", "crm_exporter", "crm_etat",
+	} {
+		if !strings.Contains(body, name) {
+			t.Fatalf("missing %s in tools/list: %s", name, body)
+		}
+	}
+}

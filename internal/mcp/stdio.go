@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"brain.op3.ch/sun221/k-crm/internal/catalog"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
 
@@ -92,56 +94,7 @@ func (s *Server) handle(req rpc) rpc {
 }
 
 func tools() []map[string]any {
-	return []map[string]any{
-		{
-			"name":        "crm_aujourd_hui",
-			"description": "Relances en retard, dues aujourd'hui, et prospects sans suite.",
-			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
-		},
-		{
-			"name":        "crm_creer_personne",
-			"description": "Cree un prospect. due (YYYY-MM-DD) et why sont obligatoires. Jamais un client.",
-			"inputSchema": map[string]any{
-				"type":     "object",
-				"required": []string{"name", "due", "why"},
-				"properties": map[string]any{
-					"name":    map[string]any{"type": "string"},
-					"org":     map[string]any{"type": "string"},
-					"pole":    map[string]any{"type": "string"},
-					"lead":    map[string]any{"type": "string"},
-					"phone":   map[string]any{"type": "string"},
-					"email":   map[string]any{"type": "string"},
-					"due":     map[string]any{"type": "string"},
-					"why":     map[string]any{"type": "string"},
-					"channel": map[string]any{"type": "string"},
-				},
-			},
-		},
-		{
-			"name":        "crm_noter",
-			"description": "Ajoute une note libre sur le fil d'une personne.",
-			"inputSchema": map[string]any{
-				"type":     "object",
-				"required": []string{"id", "body"},
-				"properties": map[string]any{
-					"id":    map[string]any{"type": "string"},
-					"title": map[string]any{"type": "string"},
-					"body":  map[string]any{"type": "string"},
-				},
-			},
-		},
-		{
-			"name":        "crm_valider_lead",
-			"description": "Passe un prospect en client. Acte explicite.",
-			"inputSchema": map[string]any{
-				"type":     "object",
-				"required": []string{"id"},
-				"properties": map[string]any{
-					"id": map[string]any{"type": "string"},
-				},
-			},
-		},
-	}
+	return catalog.MCP()
 }
 
 func (s *Server) call(params json.RawMessage) (map[string]any, error) {
@@ -258,6 +211,65 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			}
 		}
 		out, err := s.Store.ImportProspects(strings.NewReader(args.CSV))
+		if err != nil {
+			return nil, err
+		}
+		return textResult(out)
+	case "crm_fiche":
+		var args struct {
+			ID string `json:"id"`
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		out, err := s.Store.Fiche(args.ID)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(out)
+	case "crm_attendre":
+		var args struct {
+			ID  string `json:"id"`
+			Due string `json:"due"`
+			Why string `json:"why"`
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.WaitOnThem(args.ID, args.Due, args.Why)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_modifier":
+		var args struct {
+			ID, Name, Org, Pole, Lead, Phone, Email string
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.UpdatePerson(args.ID, store.Person{
+			Name: args.Name, Org: args.Org, Pole: args.Pole, Lead: args.Lead,
+			Phone: args.Phone, Email: args.Email,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_exporter":
+		var buf bytes.Buffer
+		if err := s.Store.WriteCSV(&buf, s.now()); err != nil {
+			return nil, err
+		}
+		return textResult(map[string]string{"csv": buf.String()})
+	case "crm_etat":
+		out, err := s.Store.Snapshot(s.now())
 		if err != nil {
 			return nil, err
 		}

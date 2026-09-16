@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -139,19 +138,20 @@ func (s *Server) updatePerson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) exportCSV(w http.ResponseWriter, r *http.Request) {
-	st, err := s.Store.Snapshot(s.now())
-	if err != nil {
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"k-crm.csv\"")
+	if err := s.Store.WriteCSV(w, s.now()); err != nil {
+		writeErr(w, http.StatusInternalServerError, "store")
+	}
+}
+
+func (s *Server) exportTool(w http.ResponseWriter, r *http.Request) {
+	var buf strings.Builder
+	if err := s.Store.WriteCSV(&buf, s.now()); err != nil {
 		writeErr(w, http.StatusInternalServerError, "store")
 		return
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"k-crm.csv\"")
-	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "name", "org", "pole", "world", "lead_state", "lead", "phone", "email", "due", "why", "when"})
-	for _, p := range st.People {
-		_ = cw.Write([]string{p.ID, p.Name, p.Org, p.Pole, p.World, p.LeadState, p.Lead, p.Phone, p.Email, p.Due, p.Why, p.When})
-	}
-	cw.Flush()
+	writeJSON(w, http.StatusOK, map[string]string{"csv": buf.String()})
 }
 
 func (s *Server) importCSV(w http.ResponseWriter, r *http.Request) {
@@ -175,4 +175,121 @@ func (s *Server) importCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) importTool(w http.ResponseWriter, r *http.Request) {
+	if strings.Contains(r.Header.Get("Content-Type"), "json") {
+		var body struct {
+			CSV string `json:"csv"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid json")
+			return
+		}
+		out, err := s.Store.ImportProspects(strings.NewReader(body.CSV))
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
+	s.importCSV(w, r)
+}
+
+func (s *Server) ficheTool(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	out, err := s.Store.Fiche(body.ID)
+	if err != nil {
+		storeHTTP(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) waitTool(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID  string `json:"id"`
+		Due string `json:"due"`
+		Why string `json:"why"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	p, err := s.Store.WaitOnThem(body.ID, body.Due, body.Why)
+	if err != nil {
+		storeHTTP(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) relanceCompleteTool(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID, Due, Why, Channel string
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	p, err := s.Store.CompleteRelance(body.ID, body.Due, body.Why, body.Channel)
+	if err != nil {
+		storeHTTP(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) relancePlanTool(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID, Due, Why, Channel string
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	p, err := s.Store.PlanRelance(body.ID, body.Due, body.Why, body.Channel)
+	if err != nil {
+		storeHTTP(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) updatePersonTool(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID, Name, Org, Pole, Lead, Phone, Email string
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	p, err := s.Store.UpdatePerson(body.ID, store.Person{
+		Name: body.Name, Org: body.Org, Pole: body.Pole, Lead: body.Lead,
+		Phone: body.Phone, Email: body.Email,
+	})
+	if err != nil {
+		storeHTTP(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
+	if s.Setup == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"done": false})
+		return
+	}
+	p := s.Setup.Public()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"done": p.Done, "listen": p.Listen, "domain": p.Domain, "https": p.HTTPS,
+		"user": p.User, "token_shown": p.TokenShown,
+	})
 }

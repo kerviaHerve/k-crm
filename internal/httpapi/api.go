@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"brain.op3.ch/sun221/k-crm/internal/catalog"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 	"brain.op3.ch/sun221/k-crm/internal/webui"
@@ -65,8 +66,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/people/{id}/lost", s.auth(s.markLost))
 	mux.HandleFunc("POST /api/v1/people/{id}/relance", s.auth(s.relance))
 	mux.HandleFunc("POST /api/v1/tools/crm_marquer_perdu", s.auth(s.markLostTool))
-	mux.HandleFunc("POST /api/v1/tools/crm_relancer", s.auth(s.relanceTool))
-	mux.HandleFunc("POST /api/v1/tools/crm_reporter", s.auth(s.relanceTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_relancer", s.auth(s.relanceCompleteTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_reporter", s.auth(s.relancePlanTool))
 	mux.HandleFunc("POST /api/v1/tools/crm_chercher", s.auth(s.search))
 	mux.HandleFunc("GET /ui/api/state", s.state)
 	mux.HandleFunc("GET /ui/api/search", s.search)
@@ -81,7 +82,13 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/export.csv", s.auth(s.exportCSV))
 	mux.HandleFunc("POST /ui/api/import.csv", s.importCSV)
 	mux.HandleFunc("POST /api/v1/import.csv", s.auth(s.importCSV))
-	mux.HandleFunc("POST /api/v1/tools/crm_importer", s.auth(s.importCSV))
+	mux.HandleFunc("POST /api/v1/tools/crm_importer", s.auth(s.importTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_fiche", s.auth(s.ficheTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_attendre", s.auth(s.waitTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_modifier", s.auth(s.updatePersonTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_exporter", s.auth(s.exportTool))
+	mux.HandleFunc("POST /api/v1/tools/crm_etat", s.auth(s.state))
+	mux.HandleFunc("GET /api/v1/config", s.auth(s.publicConfig))
 	webui.Mount(mux, s.Store, s.now)
 	return s.gate(mux)
 }
@@ -112,30 +119,7 @@ func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) tools(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
-		"tools": []map[string]any{
-			{
-				"name":        "crm_aujourd_hui",
-				"description": "Relances en retard, dues aujourd'hui, et prospects sans suite.",
-				"http":        []string{"GET /api/v1/aujourd-hui", "POST /api/v1/tools/crm_aujourd_hui"},
-			},
-			{
-				"name":        "crm_creer_personne",
-				"description": "Cree un prospect. Relance (due + why) obligatoire. Ne cree jamais un client.",
-				"http":        []string{"POST /api/v1/prospects", "POST /api/v1/tools/crm_creer_personne"},
-			},
-			{
-				"name":        "crm_noter",
-				"description": "Ajoute une note libre sur le fil d'une personne.",
-				"http":        []string{"POST /api/v1/people/{id}/notes", "POST /api/v1/tools/crm_noter"},
-			},
-			{
-				"name":        "crm_valider_lead",
-				"description": "Passe un prospect en client. Acte explicite, irreversible ici.",
-				"http":        []string{"POST /api/v1/people/{id}/validate", "POST /api/v1/tools/crm_valider_lead"},
-			},
-		},
-	})
+	writeJSON(w, http.StatusOK, map[string]any{"tools": catalog.HTTP()})
 }
 
 func (s *Server) aujourdHui(w http.ResponseWriter, r *http.Request) {

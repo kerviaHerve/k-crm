@@ -342,6 +342,24 @@ ORDER BY p.name`)
 	return out, nil
 }
 
+func (s *Store) WriteCSV(w io.Writer, now time.Time) error {
+	st, err := s.Snapshot(now)
+	if err != nil {
+		return err
+	}
+	cw := csv.NewWriter(w)
+	if err := cw.Write([]string{"id", "name", "org", "pole", "world", "lead_state", "lead", "phone", "email", "due", "why", "when"}); err != nil {
+		return err
+	}
+	for _, p := range st.People {
+		if err := cw.Write([]string{p.ID, p.Name, p.Org, p.Pole, p.World, p.LeadState, p.Lead, p.Phone, p.Email, p.Due, p.Why, p.When}); err != nil {
+			return err
+		}
+	}
+	cw.Flush()
+	return cw.Error()
+}
+
 type ImportError struct {
 	Line   int    `json:"line"`
 	Name   string `json:"name,omitempty"`

@@ -20,6 +20,8 @@
   <svg width="0" height="0" aria-hidden="true" style="position:absolute">
     <defs>
       <symbol id="LockKeyhole" viewBox="0 0 24 24"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></symbol>
+      <symbol id="Eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="EyeOff" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M6.71 6.71A10.7 10.7 0 0 0 2.06 11.65a1 1 0 0 0 0 .7A10.75 10.75 0 0 0 18 17.94"/><path d="M10.73 5.08A10.8 10.8 0 0 1 21.94 11.65a1 1 0 0 1 0 .7 10.8 10.8 0 0 1-1.72 2.75"/><path d="M14.12 14.12A3 3 0 0 1 9.88 9.88"/></symbol>
     </defs>
   </svg>
   <div class="shell">
@@ -33,7 +35,7 @@
       </nav>
       <div class="sidebar-foot">
         <strong>Premier lancement</strong>
-        <span>Un utilisateur, 2FA obligatoire</span>
+        <span>Six gestes, un utilisateur, 2FA</span>
       </div>
     </aside>
     <main class="main">
@@ -50,10 +52,12 @@
             <span id="dot2"></span>
             <span id="dot3"></span>
             <span id="dot4"></span>
+            <span id="dot5"></span>
+            <span id="dot6"></span>
           </div>
           <div class="overline"><svg class="icon" aria-hidden="true"><use href="#LockKeyhole"/></svg>Installeur</div>
-          <h1 id="installTitle">Installation</h1>
-          <p class="intro" id="intro">Ce n’est pas une doc. Quatre gestes, puis le pupitre.</p>
+          <h1 id="installTitle">Où ça s’écoute</h1>
+          <p class="intro" id="intro">IP explicite. Jamais 0.0.0.0.</p>
           <p class="form-error" id="err" aria-live="polite"></p>
 
           <form class="gate-form" id="step1">
@@ -61,29 +65,44 @@
               <label for="listen">IP et port</label>
               <input id="listen" required value="100.100.73.244:8795" autocomplete="off">
             </div>
-            <div class="field">
-              <label for="domain">Nom de domaine</label>
-              <input id="domain" value="k-crm.op3.vpn" placeholder="crm.interne">
-            </div>
-            <label class="gate-note" style="margin:0">
-              <input type="checkbox" id="https"> Derrière un reverse proxy HTTPS
-            </label>
-            <button class="btn primary gate-submit" type="submit">Compte</button>
+            <button class="btn primary gate-submit" type="submit">Domaine</button>
           </form>
 
           <form class="gate-form" id="step2" hidden>
+            <div class="field">
+              <label for="domain">Nom de domaine</label>
+              <input id="domain" value="k-crm.op3.vpn" placeholder="crm.interne" autocomplete="off">
+            </div>
+            <p class="gate-note">Optionnel si tu restes sur l’IP overlay. Utile derrière un nom interne.</p>
+            <button class="btn primary gate-submit" type="submit">HTTPS</button>
+          </form>
+
+          <form class="gate-form" id="step3" hidden>
+            <label class="gate-note" style="margin:0">
+              <input type="checkbox" id="https"> Derrière un reverse proxy HTTPS
+            </label>
+            <p class="gate-note">Coche seulement si un proxy termine le TLS. Le binaire refuse toujours 0.0.0.0.</p>
+            <button class="btn primary gate-submit" type="submit">Compte</button>
+          </form>
+
+          <form class="gate-form" id="step4" hidden>
             <div class="field">
               <label for="user">Identifiant unique</label>
               <input id="user" required autocomplete="username">
             </div>
             <div class="field">
               <label for="password">Mot de passe</label>
-              <input id="password" type="password" required minlength="10" autocomplete="new-password">
+              <div class="pw-wrap">
+                <input id="password" type="password" required minlength="10" autocomplete="new-password">
+                <button class="pw-toggle" type="button" id="pwToggle" aria-label="Afficher le mot de passe">
+                  <svg class="icon" aria-hidden="true"><use href="#Eye"/></svg>
+                </button>
+              </div>
             </div>
             <button class="btn primary gate-submit" type="submit">Activer le 2FA</button>
           </form>
 
-          <form class="gate-form" id="step3" hidden>
+          <form class="gate-form" id="step5" hidden>
             <p class="intro" style="margin:0">Ajoute ce secret dans l’authenticator, puis le code à six chiffres.</p>
             <p class="secret-box" id="secret"></p>
             <div class="field">
@@ -103,19 +122,28 @@
     </main>
   </div>
   <script>
+    const titles = ["", "Où ça s’écoute", "Le nom", "HTTPS", "Toi seulement", "Le 2FA", "Le jeton"];
+    const intros = ["",
+      "IP explicite. Jamais 0.0.0.0.",
+      "Un nom interne, pas une pub internet.",
+      "TLS seulement si un proxy le termine.",
+      "Un compte. Pas d’équipe.",
+      "Sans le code, le pupitre reste fermé.",
+      "Ensuite tu te connectes. Le jeton sert aux agents."];
     const err = (m) => { document.getElementById("err").textContent = m || ""; };
     const setStep = (n) => {
-      [1,2,3,4].forEach((i) => {
+      [1,2,3,4,5,6].forEach((i) => {
         const d = document.getElementById("dot" + i);
         if (d) d.setAttribute("aria-current", i === n ? "true" : "false");
       });
-      document.getElementById("installTitle").textContent =
-        n === 1 ? "Où ça s’écoute" : n === 2 ? "Toi seulement" : n === 3 ? "Le 2FA" : "Le jeton";
-      document.getElementById("intro").textContent =
-        n === 1 ? "IP explicite. Jamais 0.0.0.0." :
-        n === 2 ? "Un compte. Pas d’équipe." :
-        n === 3 ? "Sans le code, le pupitre reste fermé." :
-        "Ensuite tu te connectes. Le jeton sert aux agents.";
+      document.getElementById("installTitle").textContent = titles[n];
+      document.getElementById("intro").textContent = intros[n];
+    };
+    const show = (id) => {
+      ["step1","step2","step3","step4","step5","done"].forEach((k) => {
+        const el = document.getElementById(k);
+        if (el) el.hidden = k !== id;
+      });
     };
     const api = async (url, body) => {
       const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -123,41 +151,43 @@
       if (!r.ok) throw new Error(data.error || r.status);
       return data;
     };
-    document.getElementById("step1").addEventListener("submit", (e) => {
-      e.preventDefault();
-      err("");
-      document.getElementById("step1").hidden = true;
-      document.getElementById("step2").hidden = false;
-      setStep(2);
-      document.getElementById("user").focus();
+    const pw = document.getElementById("password");
+    const toggle = document.getElementById("pwToggle");
+    toggle.addEventListener("click", () => {
+      const showPw = pw.type === "password";
+      pw.type = showPw ? "text" : "password";
+      toggle.setAttribute("aria-label", showPw ? "Masquer le mot de passe" : "Afficher le mot de passe");
+      toggle.querySelector("use").setAttribute("href", showPw ? "#EyeOff" : "#Eye");
     });
-    document.getElementById("step2").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      err("");
+    document.getElementById("step1").addEventListener("submit", (e) => {
+      e.preventDefault(); err(""); show("step2"); setStep(2); document.getElementById("domain").focus();
+    });
+    document.getElementById("step2").addEventListener("submit", (e) => {
+      e.preventDefault(); err(""); show("step3"); setStep(3);
+    });
+    document.getElementById("step3").addEventListener("submit", (e) => {
+      e.preventDefault(); err(""); show("step4"); setStep(4); document.getElementById("user").focus();
+    });
+    document.getElementById("step4").addEventListener("submit", async (e) => {
+      e.preventDefault(); err("");
       try {
         const data = await api("/install/start", {
           listen: document.getElementById("listen").value.trim(),
           domain: document.getElementById("domain").value.trim(),
           https: document.getElementById("https").checked,
           user: document.getElementById("user").value.trim(),
-          password: document.getElementById("password").value
+          password: pw.value
         });
         document.getElementById("secret").textContent = data.secret;
-        document.getElementById("step2").hidden = true;
-        document.getElementById("step3").hidden = false;
-        setStep(3);
-        document.getElementById("code").focus();
+        show("step5"); setStep(5); document.getElementById("code").focus();
       } catch (ex) { err(ex.message); }
     });
-    document.getElementById("step3").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      err("");
+    document.getElementById("step5").addEventListener("submit", async (e) => {
+      e.preventDefault(); err("");
       try {
         const data = await api("/install/confirm", { code: document.getElementById("code").value.trim() });
-        document.getElementById("step3").hidden = true;
-        document.getElementById("done").hidden = false;
         document.getElementById("tokenOnce").textContent = data.token || "(déjà affiché)";
-        setStep(4);
+        show("done"); setStep(6);
       } catch (ex) { err(ex.message); }
     });
   </script>
