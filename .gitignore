@@ -1,0 +1,31 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_ed25519*
+*.pw
+*.tok
+
+# deps and builds
+node_modules/
+dist/
+build/
+.target/
+vendor/
+.venv/
+__pycache__/
+*.pyc
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# logs and local data
+*.log
+*.sqlite
+tmp/
+.cache/
