@@ -1,12 +1,13 @@
 # K-CRM
 
-Produit CRM Kervia. Socle Git de developpement, pas un deploiement.
+Produit CRM Kervia. Un binaire Go, SQLite, API HTTP. MCP stdio vient ensuite.
+Le meme verbe existe a la souris et en API.
 
 ## Noms
 
-- Produit: K-CRM (aussi dit kervia-CRM)
+- Produit: K-CRM
 - Slug Git: `k-crm`
-- Prefixe metier K-. Ce n'est pas un produit Hermes (pas de prefixe H-).
+- Module: `brain.op3.ch/sun221/k-crm`
 
 ## Sources
 
@@ -16,14 +17,44 @@ Produit CRM Kervia. Socle Git de developpement, pas un deploiement.
 
 ## Ce que ce depot n'est pas
 
-- Pas Twenty CRM. On ne modifie pas `crm.kervia.ch` ni `/home/op3/Projects/twenty`.
-- Pas Atomic CRM. On ne reprend pas sa stack arretee, ses volumes ni son dump.
-- Pas kervia-gest-360. Modules gest (parties, offres, factures) restent dans leur projet.
-- Pas kervia-360. Ce depot est autonome, avec son propre remote.
+- Pas Twenty (`crm.kervia.ch`) ni Atomic.
+- Pas kervia-gest-360 ni kervia-360.
+- Aucun deploiement live n'est autorise par ce lot.
 
-Aucun deploiement live n'est autorise par ce socle Git.
+## Pile
 
-## Etat
+- Go 1.26, un process
+- SQLite (`modernc.org/sqlite`, sans CGO)
+- API JSON, jeton Bearer (fichier `data/token`, mode 0600)
+- Bind explicite, refus de `0.0.0.0`
 
-Fondation seulement: README, ignore rules, branche `main`, remote prive.
-Le produit, la pile et les URLs restent a decider avant le premier lot de code.
+## Verbes (lot 1)
+
+- `crm_aujourd_hui` : `GET /api/v1/aujourd-hui`
+- Catalogue: `GET /api/v1/tools`
+- Sante: `GET /healthz` (sans jeton)
+
+## Lancer
+
+```bash
+export PATH="/home/op3/.local/share/go1.26.5/bin:$PATH"
+go run ./cmd/k-crm -listen 127.0.0.1:8740 -data ./data
+```
+
+Le jeton n'est pas affiche. Il est dans `./data/token`.
+
+```bash
+tok=$(tr -d ' \n' < ./data/token)
+curl -fsS -H "Authorization: Bearer $tok" http://127.0.0.1:8740/api/v1/aujourd-hui
+```
+
+## Tests
+
+```bash
+go test ./...
+go vet ./...
+```
+
+## Branche
+
+`main` est le socle. L'implementation est sur `feat/core-api`.

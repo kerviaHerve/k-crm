@@ -27,5 +27,7 @@ __pycache__/
 # logs and local data
 *.log
 *.sqlite
+data/
+/k-crm
 tmp/
 .cache/
