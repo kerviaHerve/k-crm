@@ -81,6 +81,48 @@ func TestCreateProspectHTTP(t *testing.T) {
 	}
 }
 
+func TestNoteAndValidateHTTP(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	p, err := st.CreateProspect(store.Person{Name: "Lea"}, "2026-09-16", "devis", "tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := &Server{Store: st, Token: "secret-test"}
+	h := srv.Routes()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/people/"+p.ID+"/notes", strings.NewReader(`{"body":"Appel 10 min"}`))
+	req.Header.Set("Authorization", "Bearer secret-test")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("note code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/people/"+p.ID+"/validate", nil)
+	req2.Header.Set("Authorization", "Bearer secret-test")
+	rec2 := httptest.NewRecorder()
+	h.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("validate code=%d body=%s", rec2.Code, rec2.Body.String())
+	}
+	req3 := httptest.NewRequest(http.MethodPost, "/api/v1/people/"+p.ID+"/validate", nil)
+	req3.Header.Set("Authorization", "Bearer secret-test")
+	rec3 := httptest.NewRecorder()
+	h.ServeHTTP(rec3, req3)
+	if rec3.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", rec3.Code)
+	}
+	req4 := httptest.NewRequest(http.MethodGet, "/api/v1/people/"+p.ID, nil)
+	req4.Header.Set("Authorization", "Bearer secret-test")
+	rec4 := httptest.NewRecorder()
+	h.ServeHTTP(rec4, req4)
+	if rec4.Code != http.StatusOK || !strings.Contains(rec4.Body.String(), `"world":"client"`) {
+		t.Fatalf("fiche=%s", rec4.Body.String())
+	}
+}
+
 func TestHealthzNoAuth(t *testing.T) {
 	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
 	if err != nil {

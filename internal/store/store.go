@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,11 @@ import (
 	_ "modernc.org/sqlite"
 
 	"brain.op3.ch/sun221/k-crm/internal/ids"
+)
+
+var (
+	ErrNotFound    = errors.New("not found")
+	ErrNotProspect = errors.New("not a prospect")
 )
 
 type Store struct {
@@ -30,6 +36,19 @@ type Person struct {
 	Why       string `json:"why,omitempty"`
 	Due       string `json:"due,omitempty"`
 	Channel   string `json:"channel,omitempty"`
+}
+
+type Note struct {
+	ID        string `json:"id"`
+	PersonID  string `json:"person_id"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	CreatedAt string `json:"created_at"`
+}
+
+type Fiche struct {
+	Person
+	Notes []Note `json:"notes"`
 }
 
 type AujourdHui struct {
@@ -142,6 +161,94 @@ func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, erro
 		return Person{}, err
 	}
 	p.Due, p.Why, p.Channel = due, why, channel
+	return p, nil
+}
+
+func (s *Store) GetPerson(id string) (Person, error) {
+	row := s.db.QueryRow(`
+SELECT id,name,org,pole,world,lead,lead_state,phone,email,'','',''
+FROM people WHERE id=?`, id)
+	var p Person
+	err := row.Scan(&p.ID, &p.Name, &p.Org, &p.Pole, &p.World, &p.Lead, &p.LeadState, &p.Phone, &p.Email, &p.Due, &p.Why, &p.Channel)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Person{}, ErrNotFound
+	}
+	return p, err
+}
+
+func (s *Store) Notes(personID string) ([]Note, error) {
+	rows, err := s.db.Query(`SELECT id,person_id,title,body,created_at FROM notes WHERE person_id=? ORDER BY created_at DESC`, personID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Note{}
+	for rows.Next() {
+		var n Note
+		if err := rows.Scan(&n.ID, &n.PersonID, &n.Title, &n.Body, &n.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, n)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) Fiche(id string) (Fiche, error) {
+	p, err := s.GetPerson(id)
+	if err != nil {
+		return Fiche{}, err
+	}
+	notes, err := s.Notes(id)
+	if err != nil {
+		return Fiche{}, err
+	}
+	return Fiche{Person: p, Notes: notes}, nil
+}
+
+func (s *Store) AddNote(personID, title, body string) (Note, error) {
+	body = strings.TrimSpace(body)
+	title = strings.TrimSpace(title)
+	if body == "" {
+		return Note{}, fmt.Errorf("note body required")
+	}
+	if title == "" {
+		title = "Note"
+	}
+	if _, err := s.GetPerson(personID); err != nil {
+		return Note{}, err
+	}
+	n := Note{ID: ids.New(), PersonID: personID, Title: title, Body: body, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
+	_, err := s.db.Exec(`INSERT INTO notes (id,person_id,title,body,created_at) VALUES (?,?,?,?,?)`,
+		n.ID, n.PersonID, n.Title, n.Body, n.CreatedAt)
+	return n, err
+}
+
+func (s *Store) ValidateLead(id string) (Person, error) {
+	p, err := s.GetPerson(id)
+	if err != nil {
+		return Person{}, err
+	}
+	if p.World != "prospect" {
+		return Person{}, ErrNotProspect
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return Person{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.Exec(`UPDATE people SET world='client', lead_state='validé' WHERE id=?`, id); err != nil {
+		return Person{}, err
+	}
+	if _, err := tx.Exec(`INSERT INTO notes (id,person_id,title,body,created_at) VALUES (?,?,?,?,?)`,
+		ids.New(), id, "Lead validé", "Acte explicite. Entrée en clientèle.", now); err != nil {
+		return Person{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	p.World = "client"
+	p.LeadState = "validé"
 	return p, nil
 }
 

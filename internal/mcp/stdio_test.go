@@ -56,3 +56,37 @@ func TestToolsCallCreateAndAujourdHui(t *testing.T) {
 		t.Fatalf("missing aujourd'hui: %s", body)
 	}
 }
+
+func TestNoteAndValidateTools(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	p, err := st.CreateProspect(store.Person{Name: "Lea"}, "2026-09-16", "devis", "tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := bytes.Join([][]byte{
+		frame(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": map[string]any{}}),
+		frame(map[string]any{
+			"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+			"params": map[string]any{"name": "crm_noter", "arguments": map[string]any{"id": p.ID, "body": "Appel"}},
+		}),
+		frame(map[string]any{
+			"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+			"params": map[string]any{"name": "crm_valider_lead", "arguments": map[string]any{"id": p.ID}},
+		}),
+	}, nil)
+	var out bytes.Buffer
+	if err := (&Server{Store: st}).Serve(bytes.NewReader(in), &out); err != nil {
+		t.Fatal(err)
+	}
+	body := out.String()
+	if !strings.Contains(body, "Appel") {
+		t.Fatalf("missing note: %s", body)
+	}
+	if !strings.Contains(body, "client") {
+		t.Fatalf("missing validate: %s", body)
+	}
+}

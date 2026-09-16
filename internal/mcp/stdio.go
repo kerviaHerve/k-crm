@@ -117,6 +117,30 @@ func tools() []map[string]any {
 				},
 			},
 		},
+		{
+			"name":        "crm_noter",
+			"description": "Ajoute une note libre sur le fil d'une personne.",
+			"inputSchema": map[string]any{
+				"type":     "object",
+				"required": []string{"id", "body"},
+				"properties": map[string]any{
+					"id":    map[string]any{"type": "string"},
+					"title": map[string]any{"type": "string"},
+					"body":  map[string]any{"type": "string"},
+				},
+			},
+		},
+		{
+			"name":        "crm_valider_lead",
+			"description": "Passe un prospect en client. Acte explicite.",
+			"inputSchema": map[string]any{
+				"type":     "object",
+				"required": []string{"id"},
+				"properties": map[string]any{
+					"id": map[string]any{"type": "string"},
+				},
+			},
+		},
 	}
 }
 
@@ -148,6 +172,30 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			Name: args.Name, Org: args.Org, Pole: args.Pole, Lead: args.Lead,
 			Phone: args.Phone, Email: args.Email,
 		}, args.Due, args.Why, args.Channel)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_noter":
+		var args struct{ ID, Title, Body string }
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		n, err := s.Store.AddNote(args.ID, args.Title, args.Body)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(n)
+	case "crm_valider_lead":
+		var args struct{ ID string }
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.ValidateLead(args.ID)
 		if err != nil {
 			return nil, err
 		}

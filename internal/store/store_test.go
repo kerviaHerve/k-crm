@@ -56,3 +56,38 @@ func TestCreateProspectRejectsEmptyDue(t *testing.T) {
 		t.Fatal("expected why error")
 	}
 }
+
+func TestValidateLeadAndNote(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	p, err := s.CreateProspect(Person{Name: "Lea"}, "2026-09-16", "devis", "tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AddNote(p.ID, "Appel", "Elle veut un devis."); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.ValidateLead(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.World != "client" || got.LeadState != "validé" {
+		t.Fatalf("got %+v", got)
+	}
+	if _, err := s.ValidateLead(p.ID); err != ErrNotProspect {
+		t.Fatalf("expected ErrNotProspect, got %v", err)
+	}
+	fiche, err := s.Fiche(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fiche.Notes) != 2 {
+		t.Fatalf("notes=%d", len(fiche.Notes))
+	}
+	if _, err := s.ValidateLead("missing"); err != ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
