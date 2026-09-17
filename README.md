@@ -25,13 +25,53 @@ Jamais `0.0.0.0`. Option `--plain` si le TUI ne s'affiche pas.
 
 ## Après le wizard
 
-Le carnet s'ouvre dans le navigateur. MCP stdio :
+Le carnet s'ouvre dans le navigateur.
+
+Le jeton n'est pas affiché. Il est dans `data/token` (mode 0600).
+Il sert à l'API HTTP. Le MCP stdio n'en a pas besoin : c'est un process local.
+
+## Brancher l'agent MCP
+
+Le MCP n'est pas un paquet à installer. C'est le même binaire, en stdio,
+sur le même dossier data que le wizard. Remplace les chemins par des
+chemins absolus (le `k-crm` construit dans le clone, et le data choisi
+à l'install, souvent `…/k-crm/data`).
+
+### Hermes
+
+`--args` en dernier, sinon le handshake meurt.
+
+```bash
+hermes mcp add kcrm --command /chemin/absolu/k-crm --connect-timeout 15 --args mcp -data /chemin/absolu/data
+```
+
+Nouvelle session ensuite. Vérifier :
+
+```bash
+hermes mcp list
+hermes mcp test kcrm
+```
+
+Tu dois voir les 24 verbes `crm_*`.
+
+### Autre client MCP
+
+```json
+{
+  "mcpServers": {
+    "kcrm": {
+      "command": "/chemin/absolu/k-crm",
+      "args": ["mcp", "-data", "/chemin/absolu/data"]
+    }
+  }
+}
+```
+
+Lancer à la main, pour un test :
 
 ```bash
 ./k-crm mcp -data ./data
 ```
-
-Le jeton n'est pas affiché. Il est dans `data/token` (mode 0600).
 
 ## Ce que ce n'est pas
 

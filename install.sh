@@ -615,6 +615,9 @@ tui_ok "Écoute   $LISTEN"
 tui_ok "Data     $DATA"
 printf '\n  %sWizard%s  http://%s/\n' "$C_COPPER$C_BOLD" "$C_RESET" "$LISTEN"
 printf '\n  %sIdentifiant, mot de passe et 2FA se saisissent dans le navigateur.%s\n' "$C_MUTE" "$C_RESET"
+printf '\n  %sMCP%s\n' "$C_BOLD$C_FG" "$C_RESET"
+printf '  hermes mcp add kcrm --command %s --connect-timeout 15 --args mcp -data %s\n' "$BIN" "$DATA"
+printf '  %s--args en dernier. Détail dans README.md%s\n' "$C_MUTE" "$C_RESET"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   printf '\n  %sDry-run: pas de lancement.%s\n' "$C_MUTE" "$C_RESET"
