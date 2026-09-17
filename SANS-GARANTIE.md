@@ -1,6 +1,6 @@
 # Sans garantie
 
-K-CRM **0.1.0-beta** est une version de développement, fournie à bien plaire.
+K-CRM **0.1.1-beta** est une version de développement, fournie à bien plaire.
 
 Ce n'est pas un produit fini. Elle peut changer, casser, perdre des données
 ou s'arrêter sans préavis.

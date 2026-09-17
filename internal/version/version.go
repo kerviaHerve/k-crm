@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const Number = "0.1.0-beta"
+const Number = "0.1.1-beta"
 
 // Revision is the git SHA, set by ldflags or discovered from build VCS info.
 var Revision string

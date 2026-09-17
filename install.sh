@@ -99,7 +99,7 @@ tui_header() {
   [[ "$USE_TUI" -eq 1 ]] || return 0
   local step="$1" title="$2"
   tui_clear
-  printf '\n  %s%sK-CRM%s  %s0.1.0-beta%s\n' "$C_COPPER" "$C_BOLD" "$C_RESET" "$C_MUTE" "$C_RESET"
+  printf '\n  %s%sK-CRM%s  %s0.1.1-beta%s\n' "$C_COPPER" "$C_BOLD" "$C_RESET" "$C_MUTE" "$C_RESET"
   printf '  %sLe wizard navigateur fait l'\''install. Ici: Go, binaire, écoute, service.%s\n\n' "$C_MUTE" "$C_RESET"
   tui_rail "$step"
   tui_rule 56
@@ -539,7 +539,7 @@ choose_listen() {
 need_tty
 
 if [[ "$USE_TUI" -eq 0 ]]; then
-  say "K-CRM 0.1.0-beta"
+  say "K-CRM 0.1.1-beta"
   say "Ce script construit le binaire et pose un service utilisateur. L'install, c'est le wizard dans le navigateur."
   say "Depot: $ROOT"
   pause

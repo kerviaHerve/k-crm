@@ -1,4 +1,4 @@
-# K-CRM 0.1.0-beta
+# K-CRM 0.1.1-beta
 
 CRM monoutilisateur. Un binaire Go, un fichier SQLite, un wizard dans le
 navigateur. Le même verbe existe à la souris, en HTTP et en MCP.
