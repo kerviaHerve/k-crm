@@ -17,11 +17,14 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Le script trouve ou installe Go, construit le binaire, demande l'IP et le
-dossier data, puis ouvre le wizard. L'install produit, c'est le wizard,
+Le script trouve ou installe Go, construit le binaire, pose un service
+utilisateur systemd (`k-crm.service`, Restart=always), puis ouvre le
+wizard. Tu peux fermer le terminal. L'install produit, c'est le wizard,
 pas le script.
 
 Jamais `0.0.0.0`. Option `--plain` si le TUI ne s'affiche pas.
+Sans systemd utilisateur, le script lance le serveur dans le terminal
+(il s'arrête si tu le fermes).
 
 ## Après le wizard
 

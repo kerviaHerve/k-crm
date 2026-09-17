@@ -1,10 +1,15 @@
+# Written by ./install.sh with the binary, listen and data of that clone.
+# This file is an example only. Do not copy overlay-era paths
+# (~/.local/bin/k-crm, ~/.local/share/k-crm, :8795).
+
 [Unit]
 Description=K-CRM
 After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/k-crm serve -listen 127.0.0.1:8740 -data %h/.local/share/k-crm
+WorkingDirectory=%h/k-crm
+ExecStart=%h/k-crm/k-crm serve -listen 127.0.0.1:8740 -data %h/k-crm/data
 Environment=KCRM_SYSTEMD=1
 Restart=always
 RestartSec=2

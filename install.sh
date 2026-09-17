@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Bootstrap K-CRM: trouve ou installe Go, construit le binaire, lance le wizard.
-# L'install produit reste le wizard dans le navigateur. Ce script n'est pas un .deb.
+# Bootstrap K-CRM: trouve ou installe Go, construit le binaire, pose un
+# service systemd utilisateur, puis le wizard navigateur prend le relais.
+# L'install produit reste le wizard. Ce script n'est pas un .deb.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -99,7 +100,7 @@ tui_header() {
   local step="$1" title="$2"
   tui_clear
   printf '\n  %s%sK-CRM%s  %s0.1.0-beta%s\n' "$C_COPPER" "$C_BOLD" "$C_RESET" "$C_MUTE" "$C_RESET"
-  printf '  %sLe wizard navigateur fait l'\''install. Ici: Go, binaire, écoute.%s\n\n' "$C_MUTE" "$C_RESET"
+  printf '  %sLe wizard navigateur fait l'\''install. Ici: Go, binaire, écoute, service.%s\n\n' "$C_MUTE" "$C_RESET"
   tui_rail "$step"
   tui_rule 56
   printf '\n  %s%s%s\n\n' "$C_BOLD$C_FG" "$title" "$C_RESET"
@@ -107,10 +108,10 @@ tui_header() {
 
 tui_rail() {
   local cur="$1"
-  local names=("Go" "Binaire" "Écoute" "Données")
+  local names=("Go" "Binaire" "Écoute" "Données" "Service")
   local i label
   printf '  '
-  for i in 1 2 3 4; do
+  for i in 1 2 3 4 5; do
     label="${names[$((i - 1))]}"
     if (( i == cur )); then
       printf '%s%s%d %s%s' "$C_COPPER$C_BOLD" "" "$i" "$label" "$C_RESET"
@@ -119,7 +120,7 @@ tui_rail() {
     else
       printf '%s%d %s%s' "$C_MUTE" "$i" "$label" "$C_RESET"
     fi
-    if (( i < 4 )); then
+    if (( i < 5 )); then
       printf '%s  ·  %s' "$C_MUTE" "$C_RESET"
     fi
   done
@@ -369,6 +370,47 @@ refuse_wildcard() {
   esac
 }
 
+UNIT_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/k-crm.service"
+
+systemd_user_ok() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  [[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/systemd/private" ]]
+}
+
+unit_body() {
+  cat <<EOF
+[Unit]
+Description=K-CRM
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$ROOT
+ExecStart=$BIN serve -listen $LISTEN -data $DATA
+Environment=KCRM_SYSTEMD=1
+Restart=always
+RestartSec=2
+UMask=077
+
+[Install]
+WantedBy=default.target
+EOF
+}
+
+try_linger() {
+  local linger
+  command -v loginctl >/dev/null 2>&1 || return 0
+  linger="$(loginctl show-user "$USER" -p Linger --value 2>/dev/null || true)"
+  if [[ "$linger" == "yes" ]]; then
+    return 0
+  fi
+  if loginctl enable-linger "$USER" >/dev/null 2>&1; then
+    tui_ok "Linger utilisateur activé (survit à la déconnexion)"
+    return 0
+  fi
+  tui_note "Sans linger, le service s'arrête à la déconnexion. En root: loginctl enable-linger $USER"
+}
+
 kind_label() {
   case "$1" in
     overlay) printf 'overlay, recommandée' ;;
@@ -498,7 +540,7 @@ need_tty
 
 if [[ "$USE_TUI" -eq 0 ]]; then
   say "K-CRM 0.1.0-beta"
-  say "Ce script construit le binaire. L'install, c'est le wizard dans le navigateur."
+  say "Ce script construit le binaire et pose un service utilisateur. L'install, c'est le wizard dans le navigateur."
   say "Depot: $ROOT"
   pause
 fi
@@ -511,7 +553,7 @@ fi
 tui_header 1 "Go 1.26+"
 if [[ "$USE_TUI" -eq 0 ]]; then
   say ""
-  say "1/4  Go"
+  say "1/5  Go"
 fi
 GO_BIN=""
 if GO_BIN="$(find_go)"; then
@@ -550,7 +592,7 @@ if [[ "$USE_TUI" -eq 0 ]]; then pause; fi
 tui_header 2 "Construction du binaire"
 if [[ "$USE_TUI" -eq 0 ]]; then
   say ""
-  say "2/4  Construction"
+  say "2/5  Construction"
 fi
 export CGO_ENABLED=0
 tui_note "go build -o k-crm ./cmd/k-crm"
@@ -574,7 +616,7 @@ if [[ -n "$LISTEN_FLAG" ]]; then
 else
   if [[ "$USE_TUI" -eq 0 ]]; then
     say ""
-    say "3/4  Adresse d'ecoute (IP explicite, jamais 0.0.0.0)"
+    say "3/5  Adresse d'ecoute (IP explicite, jamais 0.0.0.0)"
   fi
   choose_listen
 fi
@@ -587,7 +629,7 @@ fi
 tui_header 4 "Dossier data"
 if [[ "$USE_TUI" -eq 0 ]]; then
   say ""
-  say "4/4  Donnees (carnet, jeton, sessions). Pas le carnet d'une autre install."
+  say "4/5  Donnees (carnet, jeton, sessions). Pas le carnet d'une autre install."
 fi
 tui_note "Carnet, jeton, sessions. Pas le data d'une autre install."
 printf '\n'
@@ -609,10 +651,35 @@ if [[ -f "$DATA/config.json" ]]; then
 fi
 tui_ok "$DATA"
 
-tui_header 4 "Prêt"
+case "$ROOT$BIN$LISTEN$DATA" in
+  *$'\n'*|*$'\r'*) err "chemin ou listen invalide" ; exit 1 ;;
+esac
+
+USE_SYSTEMD=0
+if systemd_user_ok; then
+  USE_SYSTEMD=1
+fi
+
+tui_header 5 "Service"
+if [[ "$USE_TUI" -eq 0 ]]; then
+  say ""
+  say "5/5  Service"
+fi
+if [[ "$USE_SYSTEMD" -eq 1 ]]; then
+  tui_ok "systemd utilisateur"
+  tui_note "$UNIT_PATH"
+  tui_note "Restart=always. Tu pourras fermer ce terminal."
+else
+  tui_note "systemd utilisateur indisponible. Lancement dans ce terminal: il s'arrête si tu le fermes."
+fi
+
+tui_header 5 "Prêt"
 tui_ok "Binaire  $BIN"
 tui_ok "Écoute   $LISTEN"
 tui_ok "Data     $DATA"
+if [[ "$USE_SYSTEMD" -eq 1 ]]; then
+  tui_ok "Service  k-crm.service"
+fi
 printf '\n  %sWizard%s  http://%s/\n' "$C_COPPER$C_BOLD" "$C_RESET" "$LISTEN"
 printf '\n  %sIdentifiant, mot de passe et 2FA se saisissent dans le navigateur.%s\n' "$C_MUTE" "$C_RESET"
 printf '\n  %sMCP%s\n' "$C_BOLD$C_FG" "$C_RESET"
@@ -620,18 +687,60 @@ printf '  hermes mcp add kcrm --command %s --connect-timeout 15 --args mcp -data
 printf '  %s--args en dernier. Détail dans README.md%s\n' "$C_MUTE" "$C_RESET"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
-  printf '\n  %sDry-run: pas de lancement.%s\n' "$C_MUTE" "$C_RESET"
-  say "$BIN serve -listen $LISTEN -data $DATA"
+  printf '\n  %sDry-run: pas de lancement, unit non écrit.%s\n' "$C_MUTE" "$C_RESET"
+  if [[ "$USE_SYSTEMD" -eq 1 ]]; then
+    say ""
+    say "---- $UNIT_PATH ----"
+    unit_body
+    say "----"
+    say "systemctl --user daemon-reload && systemctl --user enable k-crm.service && systemctl --user restart k-crm.service"
+  else
+    say "$BIN serve -listen $LISTEN -data $DATA"
+  fi
   exit 0
 fi
 
 printf '\n'
 if [[ "$USE_TUI" -eq 1 ]]; then
-  printf '  %sEntrée pour lancer le serveur%s' "$C_MUTE" "$C_RESET"
+  if [[ "$USE_SYSTEMD" -eq 1 ]]; then
+    printf '  %sEntrée pour activer le service%s' "$C_MUTE" "$C_RESET"
+  else
+    printf '  %sEntrée pour lancer le serveur%s' "$C_MUTE" "$C_RESET"
+  fi
   printf '%s' "$C_SHOW"
   read -r _
 else
   pause
+fi
+
+if [[ "$USE_SYSTEMD" -eq 1 ]]; then
+  mkdir -p "$(dirname "$UNIT_PATH")"
+  unit_body > "$UNIT_PATH"
+  systemctl --user daemon-reload
+  systemctl --user enable k-crm.service
+  systemctl --user restart k-crm.service
+  if ! systemctl --user is-active --quiet k-crm.service; then
+    err "k-crm.service n'est pas actif"
+    systemctl --user status k-crm.service --no-pager -l >&2 || true
+    exit 1
+  fi
+  ok_health=0
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if command -v curl >/dev/null 2>&1 && curl -fsS --connect-timeout 1 "http://$LISTEN/healthz" >/dev/null 2>&1; then
+      ok_health=1
+      break
+    fi
+    sleep 0.3
+  done
+  try_linger
+  tui_ok "Service actif"
+  if [[ "$ok_health" -eq 1 ]]; then
+    tui_ok "http://$LISTEN/  (healthz 200)"
+  else
+    tui_note "Service lancé. Ouvre http://$LISTEN/ pour le wizard."
+  fi
+  printf '%s' "$C_SHOW"
+  exit 0
 fi
 
 printf '%s' "$C_SHOW"
