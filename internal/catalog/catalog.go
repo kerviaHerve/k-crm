@@ -91,6 +91,13 @@ func All() []Tool {
 			HTTP:        []string{"GET /api/v1/perdus", "POST /api/v1/tools/crm_perdus"},
 		},
 		{
+			Name:        "crm_ingerer",
+			Description: "Parse un message RFC822 et classe une note si l'adresse est au carnet. Refuse listes, bounces, noreply, auto, vides. Ne cree jamais de fiche.",
+			HTTP:        []string{"POST /api/v1/ingest", "POST /api/v1/tools/crm_ingerer"},
+			Required:    []string{"raw"},
+			Properties:  map[string]any{"raw": str, "eml": str, "message": str, "from": str, "subject": str, "body": str},
+		},
+		{
 			Name:        "crm_cles_lister",
 			Description: "Liste les cles agent (sans secret).",
 			HTTP:        []string{"GET /api/v1/keys", "POST /api/v1/tools/crm_cles_lister"},

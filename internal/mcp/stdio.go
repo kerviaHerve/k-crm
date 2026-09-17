@@ -328,6 +328,30 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			return nil, err
 		}
 		return textResult(list)
+	case "crm_ingerer":
+		var args struct {
+			Raw, Eml, Message, From, Subject, Body string
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		raw := strings.TrimSpace(args.Raw)
+		if raw == "" {
+			raw = strings.TrimSpace(args.Eml)
+		}
+		if raw == "" {
+			raw = strings.TrimSpace(args.Message)
+		}
+		if raw == "" {
+			return nil, fmt.Errorf("raw message required")
+		}
+		out, err := s.Store.IngestRaw(raw)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(out)
 	default:
 		return nil, fmt.Errorf("unknown tool")
 	}

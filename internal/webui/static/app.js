@@ -833,6 +833,35 @@ $("backupList")?.addEventListener("click", async (event) => {
     $("backupErr").textContent = err.message;
   }
 });
+$("ingestForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("ingestErr").textContent = "";
+  $("ingestOut").hidden = true;
+  try {
+    const file = $("ingestFile")?.files?.[0];
+    let raw = $("ingestRaw")?.value || "";
+    if (file) raw = await file.text();
+    if (!String(raw).trim()) throw new Error("colle un message ou choisis un .eml");
+    const r = await fetch("/ui/api/ingest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw }),
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || "ingest");
+    const line = [out.action, out.reason, out.person_name, out.subject].filter(Boolean).join(" · ");
+    $("ingestOut").hidden = false;
+    $("ingestOut").textContent = line;
+    if (out.action === "filed") {
+      await loadState();
+      toast("Mail classé sur " + (out.person_name || "la fiche"));
+    } else {
+      toast("Non classé : " + (out.reason || out.action));
+    }
+  } catch (err) {
+    $("ingestErr").textContent = err.message;
+  }
+});
 
 setTheme(document.documentElement.dataset.theme);
 loadState().then(() => {

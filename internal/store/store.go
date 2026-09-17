@@ -113,6 +113,14 @@ CREATE TABLE IF NOT EXISTS notes (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS relances_open_due ON relances(open, due);
+CREATE TABLE IF NOT EXISTS ingest (
+  message_id TEXT PRIMARY KEY,
+  person_id TEXT NOT NULL REFERENCES people(id),
+  note_id TEXT NOT NULL,
+  from_email TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
 `)
 	return err
 }

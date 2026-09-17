@@ -294,6 +294,18 @@
               <div class="stack" id="backupList"></div>
               <p class="form-error" id="backupErr" aria-live="polite"></p>
             </article>
+
+            <article class="panel settings-wide">
+              <h2>Collecteur mail</h2>
+              <p>Parseur RFC822. Une note seulement si l'expéditeur (ou un destinataire) est déjà au carnet. Listes, bounces, noreply, réponses auto et messages vides : refusés. Jamais de nouvelle fiche.</p>
+              <form id="ingestForm">
+                <div class="field"><label for="ingestFile">Fichier .eml</label><input id="ingestFile" type="file" accept=".eml,message/rfc822,text/plain"></div>
+                <div class="field"><label for="ingestRaw">Ou message brut</label><textarea id="ingestRaw" rows="8" placeholder="From: …"></textarea></div>
+                <button class="btn primary" type="submit">Parser et classer</button>
+              </form>
+              <p id="ingestOut" class="secret-box" hidden></p>
+              <p class="form-error" id="ingestErr" aria-live="polite"></p>
+            </article>
           </div>
         </section>
       </div>

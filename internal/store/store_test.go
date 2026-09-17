@@ -283,3 +283,48 @@ func TestBackupAndStagedRestore(t *testing.T) {
 		t.Fatalf("lost %+v err=%v", lost, err)
 	}
 }
+
+func TestIngestFilesKnownAddressSkipsNoiseAndUnknown(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	p, err := s.CreateProspect(Person{Name: "Lea Morel", Org: "Nord", Email: "lea@nord.example"}, "2026-09-20", "devis", "mail")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mail := "From: Lea Morel <lea@nord.example>\r\nSubject: Devis site\r\nMessage-ID: <ing1@nord.example>\r\n\r\nBonjour, on avance sur le devis de la page d'accueil.\r\n"
+	got, err := s.IngestRaw(mail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Action != "filed" || got.PersonID != p.ID {
+		t.Fatalf("filed %+v", got)
+	}
+	dup, err := s.IngestRaw(mail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dup.Action != "duplicate" {
+		t.Fatalf("dup %+v", dup)
+	}
+	skip, err := s.IngestRaw("From: noreply@shop.example\r\nSubject: Order\r\n\r\nThanks for your order, it will ship tomorrow morning.\r\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if skip.Action != "skipped" || skip.Reason != "noreply" {
+		t.Fatalf("skip %+v", skip)
+	}
+	miss, err := s.IngestRaw("From: inconnu@ailleurs.example\r\nSubject: Hello there friend\r\n\r\nThis is a real looking message from nobody we know yet.\r\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if miss.Action != "unmatched" {
+		t.Fatalf("unmatched %+v", miss)
+	}
+	fiche, err := s.Fiche(p.ID)
+	if err != nil || len(fiche.Notes) != 1 {
+		t.Fatalf("notes %+v err=%v", fiche.Notes, err)
+	}
+}
