@@ -13,6 +13,9 @@ let activities = [];
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function ico(name) {
+  return `<svg class="icon" aria-hidden="true"><use href="#${name}"/></svg>`;
+}
 
 function metaBits(p) {
   return [p.org, p.pole].filter(Boolean).map(esc).join(" · ");
@@ -104,10 +107,10 @@ function relanceCard(p, withActions) {
   const actions = withActions ? `
     <div class="actions">
       ${p.when === "orphan"
-        ? `<button class="btn primary" type="button" data-act="plan" data-id="${p.id}">Poser une relance</button>`
-        : `<button class="btn primary" type="button" data-quick="done" data-days="1" data-id="${p.id}">Fait, demain</button>
-           <button class="btn" type="button" data-quick="snooze" data-days="3" data-id="${p.id}">+3 j</button>`}
-      ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="validate" data-id="${p.id}">Valider</button>` : ""}
+        ? `<button class="btn primary" type="button" data-act="plan" data-id="${p.id}">${ico("Calendar")}Poser une relance</button>`
+        : `<button class="btn primary" type="button" data-quick="done" data-days="1" data-id="${p.id}">${ico("Check")}Fait, demain</button>
+           <button class="btn" type="button" data-quick="snooze" data-days="3" data-id="${p.id}">${ico("Calendar")}+3 j</button>`}
+      ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="validate" data-id="${p.id}">${ico("Check")}Valider</button>` : ""}
     </div>` : `<div class="actions">${whenChip(p.when, p.whenLabel)}</div>`;
   return `
     <article class="relance" data-open="${p.id}" tabindex="0">
@@ -265,17 +268,36 @@ function renderPerson(id) {
   $("personActions").innerHTML = `
     <h2>Gestes</h2>
     <p>${p.world === "prospect" ? "Tant que le lead n'est pas validé, cette fiche reste un prospect." : "Lead déjà validé. Relance optionnelle."}</p>
+    <div class="classify field">
+      <label for="personPole">Activité</label>
+      <select id="personPole" data-classify="${p.id}">${activityOptions(p.pole || "")}</select>
+      <div class="classify-new" id="personPoleNewWrap" hidden>
+        <label for="personPoleNew">Nouvelle activité</label>
+        <input id="personPoleNew" maxlength="40" placeholder="Conseil, atelier…">
+        <button class="btn primary" type="button" data-classify-new="${p.id}">Classer</button>
+      </div>
+    </div>
     <div class="stack">
-      ${p.phone ? `<a class="btn" href="${telHref(p.phone)}">Appeler</a>` : ""}
-      ${p.email ? `<a class="btn" href="mailto:${esc(p.email)}">Écrire</a>` : ""}
-      ${p.due ? `<a class="btn" href="/ui/api/people/${p.id}/relance.ics">Agenda</a>` : ""}
-      ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn primary" type="button" data-act="validate" data-id="${p.id}">Valider le lead</button>` : ""}
-      <button class="btn" type="button" data-act="edit" data-id="${p.id}">Modifier la fiche</button>
-      <button class="btn" type="button" data-act="note" data-id="${p.id}">Ajouter une note</button>
-      <button class="btn" type="button" data-act="${p.next ? "snooze" : "plan"}" data-id="${p.id}">${p.next ? "Reporter" : "Poser une relance"}</button>
-      ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="wait" data-id="${p.id}">En attente d'eux</button>` : ""}
-      ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn danger" type="button" data-act="lost" data-id="${p.id}">Marquer perdu</button>` : ""}
-    </div>`;
+      ${p.phone ? `<a class="btn" href="${telHref(p.phone)}">${ico("Phone")}Appeler</a>` : ""}
+      ${p.email ? `<a class="btn" href="mailto:${esc(p.email)}">${ico("Send")}Écrire</a>` : ""}
+      <button class="btn" type="button" data-act="edit" data-id="${p.id}">${ico("Pencil")}Modifier</button>
+      <button class="btn" type="button" data-act="note" data-id="${p.id}">${ico("StickyNote")}Note</button>
+    </div>
+    <details class="fold" open>
+      <summary>${ico("Calendar")}Relance</summary>
+      <div class="stack">
+        ${p.due ? `<a class="btn" href="/ui/api/people/${p.id}/relance.ics">${ico("Calendar")}Agenda</a>` : ""}
+        <button class="btn" type="button" data-act="${p.next ? "snooze" : "plan"}" data-id="${p.id}">${ico("Calendar")}${p.next ? "Reporter" : "Poser une relance"}</button>
+        ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="wait" data-id="${p.id}">${ico("Clock")}En attente d'eux</button>` : ""}
+      </div>
+    </details>
+    ${p.world === "prospect" && p.leadState !== "perdu" ? `<details class="fold">
+      <summary>${ico("Check")}Décision</summary>
+      <div class="stack">
+        <button class="btn primary" type="button" data-act="validate" data-id="${p.id}">${ico("Check")}Valider le lead</button>
+        <button class="btn danger" type="button" data-act="lost" data-id="${p.id}">${ico("Ban")}Marquer perdu</button>
+      </div>
+    </details>` : ""}`;
 }
 
 function renderChrono() {
@@ -479,14 +501,65 @@ async function renderPalette() {
 
 let editId = null;
 
+function activityOptions(selected) {
+  const list = activities.slice();
+  if (selected && !list.includes(selected)) list.push(selected);
+  return [`<option value="">Aucune</option>`]
+    .concat(list.map((a) => `<option value="${esc(a)}"${a === selected ? " selected" : ""}>${esc(a)}</option>`))
+    .concat(`<option value="__new__">Nouvelle…</option>`)
+    .join("");
+}
+
+function toggleNewActivityField(on) {
+  const wrap = $("cPoleNewWrap");
+  if (wrap) wrap.hidden = !on;
+  const inp = $("cPoleNew");
+  if (!inp) return;
+  if (on) inp.focus();
+  else inp.value = "";
+}
+
+function chosenPole() {
+  const sel = $("cPole")?.value || "";
+  if (sel === "__new__") return ($("cPoleNew")?.value || "").trim();
+  return sel;
+}
+
+async function reloadActivities() {
+  try {
+    const d = await api("GET", "/ui/api/settings");
+    activities = d.activities || [];
+    if (poleFilter !== "all" && !activities.includes(poleFilter)) poleFilter = "all";
+    fillActivitySelect();
+    renderActivitySettings();
+  } catch (_) {}
+}
+
+async function classifyPerson(id, pole) {
+  const p = person(id);
+  if (!p) return;
+  try {
+    const updated = await api("POST", `/ui/api/people/${id}`, {
+      name: p.name,
+      org: p.org,
+      pole: pole || "",
+      phone: p.phone,
+      email: p.email,
+      lead: p.lead
+    });
+    toast(pole ? `${updated.name} · ${pole}` : `${updated.name} sans activité`);
+    await reloadActivities();
+    await refresh("person", id);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
 function fillActivitySelect(selected) {
   const el = $("cPole");
   if (!el) return;
-  const list = activities.slice();
-  if (selected && !list.includes(selected)) list.push(selected);
-  el.innerHTML = [`<option value="">Aucune</option>`]
-    .concat(list.map((a) => `<option value="${esc(a)}"${a === selected ? " selected" : ""}>${esc(a)}</option>`))
-    .join("");
+  el.innerHTML = activityOptions(selected);
+  toggleNewActivityField(false);
 }
 
 function renderActivitySettings() {
@@ -560,20 +633,21 @@ async function createProspect(event) {
       const updated = await api("POST", `/ui/api/people/${editId}`, {
         name: $("cName").value.trim(),
         org: $("cOrg").value.trim(),
-        pole: $("cPole").value,
+        pole: chosenPole(),
         phone: $("cPhone").value.trim(),
         email: $("cMail").value.trim(),
         lead: $("cLead").value.trim()
       });
       closeCreate();
       toast(`${updated.name} mis à jour.`);
+      await reloadActivities();
       await refresh("person", updated.id);
       return;
     }
     const created = await api("POST", "/ui/api/prospects", {
       name: $("cName").value.trim(),
       org: $("cOrg").value.trim(),
-      pole: $("cPole").value,
+      pole: chosenPole(),
       phone: $("cPhone").value.trim(),
       email: $("cMail").value.trim(),
       lead: $("cLead").value.trim(),
@@ -583,6 +657,7 @@ async function createProspect(event) {
     });
     closeCreate();
     toast(`${created.name} est un prospect.`);
+    await reloadActivities();
     await refresh("person", created.id);
   } catch (err) {
     $("createError").textContent = err.message;
@@ -647,6 +722,13 @@ document.addEventListener("click", (event) => {
     quick(quickBtn.dataset.id, quickBtn.dataset.quick, Number(quickBtn.dataset.days));
     return;
   }
+  const classifyNew = event.target.closest("[data-classify-new]");
+  if (classifyNew) {
+    event.stopPropagation();
+    const name = ($("personPoleNew")?.value || "").trim();
+    if (name) classifyPerson(classifyNew.dataset.classifyNew, name);
+    return;
+  }
   const act = event.target.closest("[data-act]");
   if (act) { event.stopPropagation(); openDialog(act.dataset.act, act.dataset.id); return; }
   const open = event.target.closest("[data-open]");
@@ -663,6 +745,21 @@ $("newPersonBtn2").addEventListener("click", openCreate);
 $("createCancel").addEventListener("click", closeCreate);
 $("create").addEventListener("click", (event) => { if (event.target === $("create")) closeCreate(); });
 $("createForm").addEventListener("submit", createProspect);
+$("cPole")?.addEventListener("change", () => {
+  toggleNewActivityField($("cPole").value === "__new__");
+});
+document.addEventListener("change", (event) => {
+  const sel = event.target.closest("[data-classify]");
+  if (!sel) return;
+  const wrap = $("personPoleNewWrap");
+  if (sel.value === "__new__") {
+    if (wrap) wrap.hidden = false;
+    $("personPoleNew")?.focus();
+    return;
+  }
+  if (wrap) wrap.hidden = true;
+  classifyPerson(sel.dataset.classify, sel.value);
+});
 $("importFile").addEventListener("change", async (event) => {
   const file = event.target.files && event.target.files[0];
   event.target.value = "";
@@ -1082,3 +1179,57 @@ loadState().then(async () => {
   } catch (_) {}
   showView("today");
 }).catch((err) => toast(err.message));
+
+function groupKey(el) {
+  return "kcrm-nav-" + (el.dataset.group || "");
+}
+function restoreGroups() {
+  document.querySelectorAll(".nav-group").forEach((d) => {
+    try {
+      const v = localStorage.getItem(groupKey(d));
+      if (v === "0") d.open = false;
+      if (v === "1") d.open = true;
+    } catch (_) {}
+  });
+}
+function persistGroups() {
+  document.querySelectorAll(".nav-group").forEach((d) => {
+    try { localStorage.setItem(groupKey(d), d.open ? "1" : "0"); } catch (_) {}
+  });
+}
+function setRail(on) {
+  document.documentElement.dataset.rail = on ? "1" : "0";
+  try { localStorage.setItem("kcrm-rail", on ? "1" : "0"); } catch (_) {}
+  document.querySelectorAll("[data-rail-toggle]").forEach((btn) => {
+    btn.setAttribute("aria-expanded", String(!on));
+    btn.setAttribute("aria-label", on ? "Ouvrir le menu" : "Réduire le menu");
+    btn.setAttribute("title", on ? "Ouvrir le menu" : "Réduire le menu");
+    const use = btn.querySelector("use");
+    if (use) use.setAttribute("href", on ? "#PanelLeft" : "#PanelLeftClose");
+    const label = btn.querySelector(".nav-label");
+    if (label) label.textContent = on ? "Ouvrir" : "Réduire";
+  });
+  if (on) document.querySelectorAll(".nav-group").forEach((d) => { d.open = true; });
+  else restoreGroups();
+}
+function initRail() {
+  let on = false;
+  try { on = localStorage.getItem("kcrm-rail") === "1"; } catch (_) {}
+  if (!on) restoreGroups();
+  setRail(on);
+  document.querySelectorAll("[data-rail-toggle]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const next = document.documentElement.dataset.rail !== "1";
+      if (document.documentElement.dataset.rail !== "1") persistGroups();
+      setRail(next);
+    });
+  });
+  document.querySelectorAll(".nav-group").forEach((d) => {
+    d.addEventListener("toggle", () => {
+      if (document.documentElement.dataset.rail !== "1") persistGroups();
+    });
+  });
+}
+initRail();

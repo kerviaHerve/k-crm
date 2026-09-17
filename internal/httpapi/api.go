@@ -198,7 +198,15 @@ func (s *Server) createProspect(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	s.rememberActivity(body.Pole)
 	writeJSON(w, http.StatusCreated, p)
+}
+
+func (s *Server) rememberActivity(name string) {
+	if s == nil || s.Setup == nil {
+		return
+	}
+	_ = s.Setup.RememberActivity(name)
 }
 
 func storeHTTP(w http.ResponseWriter, err error) {

@@ -143,6 +143,7 @@ func (s *Server) updatePerson(w http.ResponseWriter, r *http.Request) {
 		storeHTTP(w, err)
 		return
 	}
+	s.rememberActivity(body.Pole)
 	writeJSON(w, http.StatusOK, p)
 }
 
@@ -288,6 +289,7 @@ func (s *Server) updatePersonTool(w http.ResponseWriter, r *http.Request) {
 		storeHTTP(w, err)
 		return
 	}
+	s.rememberActivity(body.Pole)
 	writeJSON(w, http.StatusOK, p)
 }
 

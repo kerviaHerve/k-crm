@@ -211,6 +211,24 @@ func (f *File) SetActivities(in []string) error {
 	return f.saveLocked()
 }
 
+func (f *File) RememberActivity(name string) error {
+	if f == nil {
+		return nil
+	}
+	name = strings.TrimSpace(name)
+	if name == "" || len([]rune(name)) > 40 {
+		return nil
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out, err := NormalizeActivities(append(append([]string(nil), f.cfg.Activities...), name))
+	if err != nil {
+		return err
+	}
+	f.cfg.Activities = out
+	return f.saveLocked()
+}
+
 func (f *File) VerifyPassword(password string) bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()

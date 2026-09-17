@@ -9,6 +9,7 @@
       try {
         const theme = localStorage.getItem("kcrm-alt-theme");
         document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
+        if (localStorage.getItem("kcrm-rail") === "1") document.documentElement.dataset.rail = "1";
       } catch (_) {
         document.documentElement.dataset.theme = "dark";
       }
@@ -34,6 +35,21 @@
       <symbol id="AlertTriangle" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
       <symbol id="LayoutDashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
       <symbol id="Plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="PanelLeftClose" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M16 15l-3-3 3-3"/></symbol>
+      <symbol id="PanelLeft" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></symbol>
+      <symbol id="ChevronDown" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="Tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+      <symbol id="Pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+      <symbol id="StickyNote" viewBox="0 0 24 24"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></symbol>
+      <symbol id="Ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+      <symbol id="KeyRound" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 1 2 16V8a2 2 0 0 1 .586-1.414l.828-.828A2 2 0 0 1 4.828 5h10.344a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 1 18 8v8a2 2 0 0 1-.586 1.414l-.828.828A2 2 0 0 1 15.172 19H4.828a2 2 0 0 1-1.414-.586z"/><circle cx="8.5" cy="12" r="2"/></symbol>
+      <symbol id="Shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+      <symbol id="Database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol>
+      <symbol id="LogOut" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+      <symbol id="UserX" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></symbol>
+      <symbol id="Inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+      <symbol id="Clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+      <symbol id="Send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
     </defs>
   </svg>
 
@@ -47,15 +63,25 @@
           <div class="product-name">K-CRM</div>
           <div class="product-copy">Dashboard</div>
         </div>
+        <button class="rail-toggle" type="button" id="railToggle" data-rail-toggle aria-controls="appNav" aria-expanded="true" title="Réduire le menu" aria-label="Réduire le menu">
+          <svg class="icon" aria-hidden="true"><use href="#PanelLeftClose"/></svg>
+          <span class="nav-label">Réduire</span>
+        </button>
       </div>
-      <nav class="nav" aria-label="Navigation principale">
-        <button class="nav-btn" type="button" data-nav="dash" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg>Tableau de bord</button>
-        <button class="nav-btn" type="button" data-nav="today"><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg>Aujourd'hui<span class="count" data-count="today">0</span></button>
-        <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
-        <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects<span class="count" data-count="prospects">0</span></button>
-        <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients<span class="count" data-count="clients">0</span></button>
-        <button class="nav-btn" type="button" data-nav="lost"><svg class="icon" aria-hidden="true"><use href="#AlertTriangle"/></svg>Perdus<span class="count" data-count="lost">0</span></button>
-        <button class="nav-btn" type="button" data-nav="settings"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg>Réglages</button>
+      <nav class="nav" id="appNav" aria-label="Navigation">
+        <button class="nav-btn" type="button" data-nav="dash" title="Tableau de bord" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg><span class="nav-label">Tableau de bord</span></button>
+        <details class="nav-group" open data-group="work">
+          <summary>Travail</summary>
+          <button class="nav-btn" type="button" data-nav="today" title="Aujourd'hui"><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg><span class="nav-label">Aujourd'hui</span><span class="count" data-count="today">0</span></button>
+          <button class="nav-btn" type="button" data-nav="chrono" title="Chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg><span class="nav-label">Chrono</span></button>
+        </details>
+        <details class="nav-group" open data-group="book">
+          <summary>Carnet</summary>
+          <button class="nav-btn" type="button" data-nav="prospects" title="Prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg><span class="nav-label">Prospects</span><span class="count" data-count="prospects">0</span></button>
+          <button class="nav-btn" type="button" data-nav="clients" title="Clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg><span class="nav-label">Clients</span><span class="count" data-count="clients">0</span></button>
+          <button class="nav-btn" type="button" data-nav="lost" title="Perdus"><svg class="icon" aria-hidden="true"><use href="#UserX"/></svg><span class="nav-label">Perdus</span><span class="count" data-count="lost">0</span></button>
+        </details>
+        <button class="nav-btn" type="button" data-nav="settings" title="Réglages"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg><span class="nav-label">Réglages</span></button>
       </nav>
       <div class="sidebar-foot">
         <img class="owner-avatar" id="ownerAvatar" alt="" hidden>
@@ -89,7 +115,9 @@
               <h1>Tableau de bord</h1>
               <p id="dashPeriod">Situation réelle, fichier SQLite local.</p>
             </div>
-            <button class="btn primary" type="button" data-nav="today">Traiter les relances</button>
+            <div class="view-actions">
+              <button class="btn primary" type="button" data-nav="today">Traiter les relances</button>
+            </div>
           </div>
           <div class="filters" data-filter-bar></div>
           <div class="kpis" id="dashKpis"></div>
@@ -153,7 +181,9 @@
               <h1>Prospects</h1>
               <p>Monde séparé. Un prospect sans relance future est cassé.</p>
             </div>
-            <button class="btn primary" type="button" id="newPersonBtn2">Nouveau prospect</button>
+            <div class="view-actions">
+              <button class="btn primary" type="button" id="newPersonBtn2">Nouveau prospect</button>
+            </div>
           </div>
           <div class="filters" data-filter-bar></div>
           <div class="stack" id="prospectList"></div>
@@ -187,7 +217,9 @@
               <h1 id="personTitle">Fiche</h1>
               <p id="personSub"></p>
             </div>
-            <button class="btn ghost" type="button" data-nav="today">Retour</button>
+            <div class="view-actions">
+              <button class="btn ghost" type="button" data-nav="today">Retour</button>
+            </div>
           </div>
           <div class="layout">
             <article class="panel" id="personScene"></article>
@@ -201,15 +233,15 @@
               <h1>Réglages</h1>
               <p>Toi, le 2FA, les clés agent, le mail. Rien d'une équipe.</p>
             </div>
-            <button class="btn ghost" type="button" id="logoutBtn">Se déconnecter</button>
+            <button class="btn ghost" type="button" id="logoutBtn"><svg class="icon" aria-hidden="true"><use href="#LogOut"/></svg>Se déconnecter</button>
           </div>
           <div class="settings-tabs" role="tablist" aria-label="Réglages">
             <button class="settings-tab" type="button" data-settings-tab="compte" role="tab" aria-selected="true" id="tabCompte">Compte</button>
             <button class="settings-tab" type="button" data-settings-tab="email" role="tab" aria-selected="false" id="tabEmail">Email</button>
           </div>
           <div class="settings-grid" id="settingsPaneCompte" role="tabpanel" aria-labelledby="tabCompte">
-            <article class="panel">
-              <h2>Profil</h2>
+            <details class="fold" open>
+              <summary><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Profil</summary>
               <p>Identifiant unique. L'avatar s'affiche à côté de ton nom, en bas à gauche.</p>
               <div class="avatar-row">
                 <img class="owner-avatar lg" id="settingsAvatar" alt="" hidden>
@@ -221,11 +253,11 @@
                 </div>
               </div>
               <p class="form-error" id="avatarErr" aria-live="polite"></p>
-            </article>
+            </details>
 
-            <article class="panel">
-              <h2>Activités</h2>
-              <p>Tes lignes. Vide au départ. Ajoute seulement ce dont tu as besoin.</p>
+            <details class="fold" open>
+              <summary><svg class="icon" aria-hidden="true"><use href="#Tag"/></svg>Activités</summary>
+              <p>Tes lignes. Vide au départ. Classer un prospect les ajoute aussi.</p>
               <ul class="activity-list" id="activityList"></ul>
               <form class="activity-add" id="activityForm">
                 <div class="field">
@@ -235,19 +267,19 @@
                 <button class="btn primary" type="submit">Ajouter</button>
               </form>
               <p class="form-error" id="activityErr" aria-live="polite"></p>
-            </article>
+            </details>
 
-            <article class="panel">
-              <h2>Ambiance</h2>
+            <details class="fold">
+              <summary><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg>Ambiance</summary>
               <p>Sombre par défaut, papier en option.</p>
               <div class="swatches" role="group" aria-label="Ambiance">
                 <button class="chip-btn" type="button" data-theme-option="dark" aria-pressed="true">Sombre</button>
                 <button class="chip-btn" type="button" data-theme-option="light" aria-pressed="false">Papier</button>
               </div>
-            </article>
+            </details>
 
-            <article class="panel">
-              <h2>Mot de passe</h2>
+            <details class="fold">
+              <summary><svg class="icon" aria-hidden="true"><use href="#LockKeyhole"/></svg>Mot de passe</summary>
               <p>Dix caractères minimum. Le code 2FA confirme le changement.</p>
               <form class="gate-form" id="passwordForm">
                 <div class="field"><label for="pwCurrent">Actuel</label><input id="pwCurrent" type="password" required autocomplete="current-password"></div>
@@ -256,10 +288,10 @@
                 <p class="form-error" id="pwErr" aria-live="polite"></p>
                 <button class="btn primary" type="submit">Changer le mot de passe</button>
               </form>
-            </article>
+            </details>
 
-            <article class="panel">
-              <h2>2FA</h2>
+            <details class="fold">
+              <summary><svg class="icon" aria-hidden="true"><use href="#Shield"/></svg>2FA</summary>
               <p>Obligatoire. Un nouvel authenticator remplace l'ancien après confirmation.</p>
               <form class="gate-form" id="totpStartForm">
                 <div class="field"><label for="totpPass">Mot de passe</label><input id="totpPass" type="password" required></div>
@@ -277,10 +309,10 @@
                 <button class="btn primary" type="submit">Activer ce 2FA</button>
               </form>
               <p class="form-error" id="totpErr" aria-live="polite"></p>
-            </article>
+            </details>
 
-            <article class="panel settings-wide">
-              <h2>Clés agent</h2>
+            <details class="fold settings-wide">
+              <summary><svg class="icon" aria-hidden="true"><use href="#KeyRound"/></svg>Clés agent</summary>
               <p>API et MCP. Le secret n'apparaît qu'une fois. Il en faut au moins une.</p>
               <form class="key-create" id="keyForm">
                 <div class="field"><label for="keyName">Nom</label><input id="keyName" required placeholder="agent-1"></div>
@@ -289,19 +321,19 @@
               <p class="secret-box" id="keyOnce" hidden></p>
               <div class="stack" id="keyList"></div>
               <p class="form-error" id="keyErr" aria-live="polite"></p>
-            </article>
+            </details>
 
-            <article class="panel settings-wide">
-              <h2>Sauvegardes</h2>
+            <details class="fold settings-wide">
+              <summary><svg class="icon" aria-hidden="true"><use href="#Database"/></svg>Sauvegardes</summary>
               <p>Copies SQLite locales. Restaurer remplace le carnet au prochain démarrage.</p>
               <button class="btn primary" type="button" id="backupNow">Sauvegarder maintenant</button>
               <div class="stack" id="backupList"></div>
               <p class="form-error" id="backupErr" aria-live="polite"></p>
-            </article>
+            </details>
           </div>
           <div class="settings-grid" id="settingsPaneEmail" role="tabpanel" aria-labelledby="tabEmail" hidden>
-            <article class="panel settings-wide">
-              <h2>Compte d'envoi</h2>
+            <details class="fold settings-wide" open>
+              <summary><svg class="icon" aria-hidden="true"><use href="#Send"/></svg>Compte d'envoi</summary>
               <p>Un seul. SMTP. Sert à envoyer. Mot de passe jamais réaffiché. Tester authentifie sans envoyer de message.</p>
               <form class="mail-form" id="smtpForm">
                 <input id="smtpId" type="hidden">
@@ -325,10 +357,10 @@
               </form>
               <p class="secret-box" id="smtpOut" hidden></p>
               <p class="form-error" id="smtpErr" aria-live="polite"></p>
-            </article>
+            </details>
 
-            <article class="panel settings-wide">
-              <h2>Boîtes à collecter</h2>
+            <details class="fold settings-wide">
+              <summary><svg class="icon" aria-hidden="true"><use href="#Inbox"/></svg>Boîtes à collecter</summary>
               <p>Autant que tu veux. IMAP. Préfère un dossier dédié plutôt que toute la boîte. Tester ouvre une session et se déconnecte, sans lire le courrier. Pas de relève automatique.</p>
               <form class="mail-form" id="imapForm">
                 <div class="field"><label for="imapName">Nom</label><input id="imapName" required placeholder="Collecte"></div>
@@ -350,10 +382,10 @@
               </form>
               <div class="stack" id="imapList"></div>
               <p class="form-error" id="imapErr" aria-live="polite"></p>
-            </article>
+            </details>
 
-            <article class="panel settings-wide">
-              <h2>Parseur</h2>
+            <details class="fold settings-wide">
+              <summary><svg class="icon" aria-hidden="true"><use href="#StickyNote"/></svg>Parseur</summary>
               <p>RFC822 à la main. Une note seulement si l'expéditeur (ou un destinataire) est déjà au carnet. Listes, bounces, noreply, réponses auto et messages vides : refusés. Jamais de nouvelle fiche.</p>
               <form id="ingestForm">
                 <div class="field"><label for="ingestFile">Fichier .eml</label><input id="ingestFile" type="file" accept=".eml,message/rfc822,text/plain"></div>
@@ -362,7 +394,7 @@
               </form>
               <p id="ingestOut" class="secret-box" hidden></p>
               <p class="form-error" id="ingestErr" aria-live="polite"></p>
-            </article>
+            </details>
           </div>
         </section>
       </div>
@@ -370,12 +402,13 @@
   </div>
 
   <nav class="mobile-nav" aria-label="Navigation mobile">
-    <button class="nav-btn" type="button" data-nav="dash" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg>Tableau</button>
-    <button class="nav-btn" type="button" data-nav="today"><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg>Relances</button>
-    <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
-    <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects</button>
-    <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients</button>
-    <button class="nav-btn" type="button" data-nav="lost"><svg class="icon" aria-hidden="true"><use href="#AlertTriangle"/></svg>Perdus</button>
+    <button class="nav-btn" type="button" data-nav="dash" title="Tableau de bord" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#LayoutDashboard"/></svg><span class="nav-label">Tableau</span></button>
+    <button class="nav-btn" type="button" data-nav="today" title="Aujourd'hui"><svg class="icon" aria-hidden="true"><use href="#Sun"/></svg><span class="nav-label">Relances</span></button>
+    <button class="nav-btn" type="button" data-nav="chrono" title="Chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg><span class="nav-label">Chrono</span></button>
+    <button class="nav-btn" type="button" data-nav="prospects" title="Prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg><span class="nav-label">Prospects</span></button>
+    <button class="nav-btn" type="button" data-nav="clients" title="Clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg><span class="nav-label">Clients</span></button>
+    <button class="nav-btn" type="button" data-nav="lost" title="Perdus"><svg class="icon" aria-hidden="true"><use href="#UserX"/></svg><span class="nav-label">Perdus</span></button>
+    <button class="nav-btn" type="button" data-nav="settings" title="Réglages"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg><span class="nav-label">Réglages</span></button>
   </nav>
 
   <div class="overlay" id="dialog" hidden>
@@ -411,7 +444,12 @@
         <div class="field"><label for="cPole">Activité</label>
           <select id="cPole" name="pole">
             <option value="">Aucune</option>
+            <option value="__new__">Nouvelle…</option>
           </select>
+        </div>
+        <div class="field" id="cPoleNewWrap" hidden>
+          <label for="cPoleNew">Nouvelle activité</label>
+          <input id="cPoleNew" maxlength="40" placeholder="Conseil, atelier…">
         </div>
         <div class="field"><label for="cPhone">Téléphone</label><input id="cPhone" name="phone" type="tel"></div>
         <div class="field"><label for="cMail">E-mail</label><input id="cMail" name="email" type="email"></div>

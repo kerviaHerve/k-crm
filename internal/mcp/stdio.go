@@ -14,6 +14,7 @@ import (
 	"brain.op3.ch/sun221/k-crm/internal/catalog"
 	"brain.op3.ch/sun221/k-crm/internal/mailacct"
 	"brain.op3.ch/sun221/k-crm/internal/store"
+	"brain.op3.ch/sun221/k-crm/internal/version"
 )
 
 type Server struct {
@@ -79,7 +80,7 @@ func (s *Server) handle(req rpc) rpc {
 		out.Result = map[string]any{
 			"protocolVersion": "2024-11-05",
 			"capabilities":    map[string]any{"tools": map[string]any{}},
-			"serverInfo":      map[string]any{"name": "k-crm", "version": "0.1.0"},
+			"serverInfo":      map[string]any{"name": "k-crm", "version": version.Number},
 		}
 	case "ping":
 		out.Result = map[string]any{}

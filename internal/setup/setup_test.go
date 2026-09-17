@@ -93,6 +93,19 @@ func TestWizardCommitAndLogin(t *testing.T) {
 	if len(got) != 2 || got[0] != "Conseil" || got[1] != "atelier" {
 		t.Fatalf("activities=%v", got)
 	}
+	if err := f.RememberActivity(""); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.RememberActivity("  Conseil "); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.RememberActivity("Formation"); err != nil {
+		t.Fatal(err)
+	}
+	got = f.Public().Activities
+	if len(got) != 3 || got[2] != "Formation" {
+		t.Fatalf("remember=%v", got)
+	}
 }
 
 func TestTOTPQR(t *testing.T) {

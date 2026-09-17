@@ -18,7 +18,7 @@ func All() []Tool {
 		},
 		{
 			Name:        "crm_creer_personne",
-			Description: "Cree un prospect. due (YYYY-MM-DD) et why sont obligatoires. Jamais un client. pole = activite libre, vide par defaut.",
+			Description: "Cree un prospect. due (YYYY-MM-DD) et why sont obligatoires. Jamais un client. pole = activite libre; une valeur neuve entre dans le catalogue.",
 			HTTP:        []string{"POST /api/v1/prospects", "POST /api/v1/tools/crm_creer_personne"},
 			Required:    []string{"name", "due", "why"},
 			Properties:  map[string]any{"name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str, "due": str, "why": str, "channel": str},

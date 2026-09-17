@@ -1,9 +1,13 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"brain.op3.ch/sun221/k-crm/internal/setup"
+	"brain.op3.ch/sun221/k-crm/internal/version"
 )
 
 func TestRejectWildcard(t *testing.T) {
@@ -42,5 +46,21 @@ func TestPickListenUsesConfigAfterWizard(t *testing.T) {
 	}
 	if got := pickListen("127.0.0.1:9000", true, f); got != "127.0.0.1:9000" {
 		t.Fatalf("explicit flag got %s", got)
+	}
+}
+
+func TestVersionIsBeta(t *testing.T) {
+	if !strings.Contains(version.Number, "beta") {
+		t.Fatalf("version %s is not beta", version.Number)
+	}
+}
+
+func TestVersionDoesNotCreateData(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "nope")
+	if err := run([]string{"version", "-data", dir}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatal("version created data dir")
 	}
 }

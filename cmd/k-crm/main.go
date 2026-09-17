@@ -19,6 +19,7 @@ import (
 	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
+	"brain.op3.ch/sun221/k-crm/internal/version"
 )
 
 func main() {
@@ -33,6 +34,10 @@ func run(args []string) error {
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		cmd = args[0]
 		args = args[1:]
+	}
+	if cmd == "version" || cmd == "-version" || cmd == "--version" {
+		fmt.Println(version.Line())
+		return nil
 	}
 	fs := flag.NewFlagSet("k-crm", flag.ContinueOnError)
 	listen := fs.String("listen", "127.0.0.1:8740", "ip:port, loopback by default")
@@ -123,7 +128,7 @@ func run(args []string) error {
 		}
 		return http.Serve(ln, srv.Routes())
 	default:
-		return fmt.Errorf("unknown command %q (serve|mcp|backup|restore)", cmd)
+		return fmt.Errorf("unknown command %q (serve|mcp|backup|restore|version)", cmd)
 	}
 }
 
