@@ -423,6 +423,13 @@
         <label for="dialogWhy">Pourquoi</label>
         <input id="dialogWhy" name="why">
       </div>
+      <div class="field" id="dialogChannelWrap" hidden>
+        <label for="dialogChannel">Type de relance</label>
+        <select id="dialogChannel">
+          <option value="tel">Téléphone</option>
+          <option value="autres">Autres</option>
+        </select>
+      </div>
       <div class="field" id="dialogNoteWrap" hidden>
         <label for="dialogNote">Note</label>
         <textarea id="dialogNote" name="note" rows="4"></textarea>
@@ -456,6 +463,20 @@
         <div class="field full"><label for="cLead">Besoin, une phrase</label><input id="cLead" name="lead" required></div>
         <div class="field"><label for="cWhen">Première relance</label><input id="cWhen" name="when" type="date" required></div>
         <div class="field"><label for="cWhy">Pourquoi relancer</label><input id="cWhy" name="why" required></div>
+        <div class="field"><label for="cChannel">Type de relance</label>
+          <select id="cChannel">
+            <option value="tel">Téléphone</option>
+            <option value="autres">Autres</option>
+          </select>
+        </div>
+        <div class="field"><label for="cHeat">Chaleur</label>
+          <select id="cHeat">
+            <option value="">Aucune</option>
+            <option value="froid">Froid</option>
+            <option value="tiede">Tiède</option>
+            <option value="chaud">Chaud</option>
+          </select>
+        </div>
       </div>
       <p class="form-error" id="createError" aria-live="polite"></p>
       <div class="dialog-foot">

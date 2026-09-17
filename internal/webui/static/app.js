@@ -51,9 +51,25 @@ function toast(text) {
 function person(id) { return people.find((p) => p.id === id); }
 function leadStateOf(p) { return p.lead_state || p.leadState || ""; }
 function channelIcon(channel) {
-  if (channel === "mail") return "Mail";
+  if (channel === "mail" || channel === "autres") return "Inbox";
   if (channel === "rdv") return "Calendar";
+  if (channel === "attente") return "Clock";
   return "Phone";
+}
+function channelLabel(channel) {
+  if (channel === "autres") return "Autres";
+  if (channel === "attente") return "En attente";
+  return "Téléphone";
+}
+function heatChip(heat) {
+  if (heat === "froid") return `<span class="chip heat-froid">Froid</span>`;
+  if (heat === "tiede") return `<span class="chip heat-tiede">Tiède</span>`;
+  if (heat === "chaud") return `<span class="chip heat-chaud">Chaud</span>`;
+  return "";
+}
+function avatarHTML(p) {
+  if (p && p.has_avatar) return `<img class="avatar" alt="" src="/ui/api/people/${p.id}/avatar">`;
+  return `<span class="avatar">${esc(p?.initials || "?")}</span>`;
 }
 function worldChip(world) {
   return `<span class="chip">${world === "client" ? "Client" : "Prospect"}</span>`;
@@ -74,6 +90,7 @@ async function loadState() {
   const data = await r.json();
   people = (data.people || []).map((p) => {
     p.leadState = leadStateOf(p);
+    p.has_avatar = !!(p.has_avatar || p.hasAvatar);
     p.timeline = p.timeline || [];
     p.initials = p.initials || "?";
     return p;
@@ -117,13 +134,14 @@ function relanceCard(p, withActions) {
       <i class="mark ${markClass(p.when)}" aria-hidden="true"></i>
       <div>
         <div class="who">
-          <span class="avatar">${esc(p.initials)}</span>
+          ${avatarHTML(p)}
           <span><b>${esc(p.name)}</b><small>${metaBits(p)}</small></span>
         </div>
         <div class="meta">
           ${worldChip(p.world)}
           ${whenChip(p.when, p.whenLabel)}
-          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#${channelIcon(p.channel)}"/></svg>${esc(p.why || "Pas de suite")}</span>
+          ${heatChip(p.heat)}
+          <span class="chip"><svg class="icon" aria-hidden="true"><use href="#${channelIcon(p.channel)}"/></svg>${esc(channelLabel(p.channel))} · ${esc(p.why || "Pas de suite")}</span>
           ${p.phone ? `<span class="chip"><svg class="icon" aria-hidden="true"><use href="#Phone"/></svg>${esc(p.phone)}</span>` : ""}
         </div>
       </div>
@@ -136,7 +154,7 @@ function personRow(p) {
     <button class="person-row" type="button" data-open="${p.id}">
       <i class="mark ${markClass(p.when)}" aria-hidden="true"></i>
       <div class="who">
-        <span class="avatar">${esc(p.initials)}</span>
+        ${avatarHTML(p)}
         <span><b>${esc(p.name)}</b><small>${metaBits(p)}${p.leadState ? (metaBits(p) ? " · " : "") + esc(p.leadState) : ""}</small></span>
       </div>
       ${whenChip(p.when, p.whenLabel)}
@@ -156,16 +174,23 @@ function detailHtml(p) {
       <div><b>${esc(e.title)}</b><p>${esc(e.body)}</p><time>${esc(e.t)}</time></div>
     </div>`).join("");
   return `
-    <h2>${esc(p.name)}</h2>
-    <p class="scene-name">${esc(p.org)}</p>
+    <div class="who">
+      ${avatarHTML(p)}
+      <div>
+        <h2>${esc(p.name)}</h2>
+        <p class="scene-name">${esc(p.org)}</p>
+      </div>
+    </div>
     <div class="meta">
       ${worldChip(p.world)}
       ${p.pole ? `<span class="chip">${esc(p.pole)}</span>` : ""}
       <span class="chip">Lead ${esc(p.leadState)}</span>
+      ${heatChip(p.heat)}
       ${p.phone ? `<a class="chip" href="${telHref(p.phone)}"><svg class="icon" aria-hidden="true"><use href="#Phone"/></svg>${esc(p.phone)}</a>` : ""}
       ${p.email ? `<a class="chip" href="mailto:${esc(p.email)}"><svg class="icon" aria-hidden="true"><use href="#Mail"/></svg>${esc(p.email)}</a>` : ""}
     </div>
     ${p.lead ? `<p>${esc(p.lead)}</p>` : ""}
+    ${p.why ? `<p class="motif">Motif · ${esc(channelLabel(p.channel))} · ${esc(p.why)}</p>` : ""}
     <div class="next-action">
       <strong>${esc(p.next || "Aucune prochaine action")}</strong>
       <span>${p.world === "prospect" && !p.next && p.leadState !== "perdu" ? "Prospect cassé: relance, perdu, ou valider le lead." : esc(p.whenLabel)}</span>
@@ -282,15 +307,24 @@ function renderPerson(id) {
       ${p.email ? `<a class="btn" href="mailto:${esc(p.email)}">${ico("Send")}Écrire</a>` : ""}
       <button class="btn" type="button" data-act="edit" data-id="${p.id}">${ico("Pencil")}Modifier</button>
       <button class="btn" type="button" data-act="note" data-id="${p.id}">${ico("StickyNote")}Note</button>
+      <label class="btn">${ico("Users")}Avatar<input type="file" accept="image/jpeg,image/png" hidden data-avatar-file="${p.id}"></label>
+      ${p.has_avatar ? `<button class="btn ghost" type="button" data-avatar-clear="${p.id}">Retirer l'avatar</button>` : ""}
     </div>
     <details class="fold" open>
       <summary>${ico("Calendar")}Relance</summary>
       <div class="stack">
         ${p.due ? `<a class="btn" href="/ui/api/people/${p.id}/relance.ics">${ico("Calendar")}Agenda</a>` : ""}
         <button class="btn" type="button" data-act="${p.next ? "snooze" : "plan"}" data-id="${p.id}">${ico("Calendar")}${p.next ? "Reporter" : "Poser une relance"}</button>
+        ${p.due ? `<button class="btn danger" type="button" data-act="drop-relance" data-id="${p.id}">${ico("Ban")}Supprimer la relance</button>` : ""}
         ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn" type="button" data-act="wait" data-id="${p.id}">${ico("Clock")}En attente d'eux</button>` : ""}
       </div>
     </details>
+    ${p.leadState === "perdu" ? `<details class="fold" open>
+      <summary>${ico("Check")}Décision</summary>
+      <div class="stack">
+        <button class="btn primary" type="button" data-act="reactivate" data-id="${p.id}">${ico("Check")}Repasser en actif</button>
+      </div>
+    </details>` : ""}
     ${p.world === "prospect" && p.leadState !== "perdu" ? `<details class="fold">
       <summary>${ico("Check")}Décision</summary>
       <div class="stack">
@@ -363,13 +397,16 @@ function openDialog(action, id) {
   dialogAction = { action, id };
   $("dialog").hidden = false;
   const needDate = action !== "validate" && action !== "lost" && action !== "note";
+  const needChannel = needDate && action !== "wait";
   $("dialogFieldWrap").hidden = !needDate;
   $("dialogWhyWrap").hidden = !needDate;
+  $("dialogChannelWrap").hidden = !needChannel;
   $("dialogNoteWrap").hidden = action !== "note";
   $("dialogField").required = needDate;
   $("dialogNote").required = action === "note";
   $("dialogNote").value = "";
   $("dialogWhy").value = p?.why || "";
+  if ($("dialogChannel")) $("dialogChannel").value = p?.channel === "autres" ? "autres" : "tel";
   if (needDate) $("dialogField").value = isoShift(action === "done" ? 1 : 3);
   if (action === "validate") {
     $("dialogTitle").textContent = "Valider le lead";
@@ -392,6 +429,22 @@ function openDialog(action, id) {
     $("dialogTitle").textContent = "Relance faite";
     $("dialogCopy").textContent = "Prospect: une relance faite exige la suivante.";
     $("dialogOk").textContent = "Poser la suite";
+  } else if (action === "drop-relance") {
+    $("dialogTitle").textContent = "Supprimer la relance";
+    $("dialogCopy").textContent = p.world === "prospect" && p.leadState !== "perdu"
+      ? "Un prospect actif a besoin de la suivante : date et motif."
+      : "La relance ouverte est retirée.";
+    $("dialogOk").textContent = "Supprimer";
+    if (p.world !== "prospect" || p.leadState === "perdu") {
+      $("dialogFieldWrap").hidden = true;
+      $("dialogWhyWrap").hidden = true;
+      $("dialogChannelWrap").hidden = true;
+      $("dialogField").required = false;
+    }
+  } else if (action === "reactivate") {
+    $("dialogTitle").textContent = "Repasser en actif";
+    $("dialogCopy").textContent = `${p.name} redevient un prospect. Date et motif obligatoires.`;
+    $("dialogOk").textContent = "Réactiver";
   } else {
     $("dialogTitle").textContent = action === "plan" ? "Poser une relance" : "Reporter";
     $("dialogCopy").textContent = "Une date est obligatoire. « Plus tard » n'existe pas.";
@@ -413,16 +466,31 @@ async function applyDialog() {
       const body = $("dialogNote").value.trim();
       if (!body) { $("dialogNote").focus(); return false; }
       await api("POST", `/ui/api/people/${id}/notes`, { body });
+    } else if (action === "reactivate") {
+      const due = $("dialogField").value;
+      const why = $("dialogWhy").value.trim();
+      if (!due || !why) { $("dialogField").focus(); return false; }
+      await api("POST", `/ui/api/people/${id}/reactivate`, { due, why, channel: $("dialogChannel")?.value || "tel" });
+    } else if (action === "drop-relance") {
+      const p = person(id);
+      const payload = { channel: $("dialogChannel")?.value || "tel" };
+      if (!(p && p.world !== "prospect") && p?.leadState !== "perdu") {
+        payload.due = $("dialogField").value;
+        payload.why = $("dialogWhy").value.trim();
+        if (!payload.due || !payload.why) { $("dialogField").focus(); return false; }
+      }
+      await api("POST", `/ui/api/people/${id}/relance/drop`, payload);
     } else {
       const due = $("dialogField").value;
       const why = $("dialogWhy").value.trim();
       if (!due || !why) { $("dialogField").focus(); return false; }
       const mode = action === "done" ? "complete" : (action === "wait" ? "wait" : "plan");
-      await api("POST", `/ui/api/people/${id}/relance`, { mode, due, why, channel: "tel" });
+      const channel = action === "wait" ? "attente" : ($("dialogChannel")?.value || "tel");
+      await api("POST", `/ui/api/people/${id}/relance`, { mode, due, why, channel });
     }
     toast("Enregistré.");
     closeDialog();
-    await refresh(action === "validate" ? "clients" : action === "lost" ? "prospects" : currentView, id);
+    await refresh(action === "validate" ? "clients" : action === "lost" ? "prospects" : action === "reactivate" ? "prospects" : currentView, id);
   } catch (err) {
     toast(err.message);
   }
@@ -535,6 +603,26 @@ async function reloadActivities() {
   } catch (_) {}
 }
 
+async function uploadPersonAvatar(id, file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch(`/ui/api/people/${id}/avatar`, { method: "POST", body: fd });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(data.error || "avatar"); return; }
+  toast("Avatar enregistré.");
+  await refresh("person", id);
+}
+
+async function clearPersonAvatar(id) {
+  try {
+    await api("DELETE", `/ui/api/people/${id}/avatar`);
+    toast("Avatar retiré.");
+    await refresh("person", id);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
 async function classifyPerson(id, pole) {
   const p = person(id);
   if (!p) return;
@@ -545,7 +633,10 @@ async function classifyPerson(id, pole) {
       pole: pole || "",
       phone: p.phone,
       email: p.email,
-      lead: p.lead
+      lead: p.lead,
+      why: p.why || "",
+      channel: p.channel || "",
+      heat: p.heat || ""
     });
     toast(pole ? `${updated.name} · ${pole}` : `${updated.name} sans activité`);
     await reloadActivities();
@@ -599,6 +690,8 @@ function openCreate() {
   $("cWhy").closest(".field").hidden = false;
   $("cWhen").value = isoShift(1);
   fillActivitySelect("");
+  if ($("cChannel")) $("cChannel").value = "tel";
+  if ($("cHeat")) $("cHeat").value = "";
   $("cName").focus();
 }
 
@@ -620,7 +713,10 @@ function openEdit(id) {
   $("cWhy").required = false;
   $("cLead").required = false;
   $("cWhen").closest(".field").hidden = true;
-  $("cWhy").closest(".field").hidden = true;
+  $("cWhy").closest(".field").hidden = false;
+  if ($("cWhy")) $("cWhy").value = p.why || "";
+  if ($("cChannel")) $("cChannel").value = p.channel === "autres" ? "autres" : "tel";
+  if ($("cHeat")) $("cHeat").value = p.heat || "";
   $("cName").focus();
 }
 
@@ -636,7 +732,10 @@ async function createProspect(event) {
         pole: chosenPole(),
         phone: $("cPhone").value.trim(),
         email: $("cMail").value.trim(),
-        lead: $("cLead").value.trim()
+        lead: $("cLead").value.trim(),
+        why: ($("cWhy")?.value || "").trim(),
+        channel: $("cChannel")?.value || "tel",
+        heat: $("cHeat")?.value || ""
       });
       closeCreate();
       toast(`${updated.name} mis à jour.`);
@@ -653,7 +752,8 @@ async function createProspect(event) {
       lead: $("cLead").value.trim(),
       due: $("cWhen").value,
       why: $("cWhy").value.trim(),
-      channel: "tel"
+      channel: $("cChannel")?.value || "tel",
+      heat: $("cHeat")?.value || ""
     });
     closeCreate();
     toast(`${created.name} est un prospect.`);
@@ -731,6 +831,12 @@ document.addEventListener("click", (event) => {
   }
   const act = event.target.closest("[data-act]");
   if (act) { event.stopPropagation(); openDialog(act.dataset.act, act.dataset.id); return; }
+  const clearAv = event.target.closest("[data-avatar-clear]");
+  if (clearAv) {
+    event.stopPropagation();
+    clearPersonAvatar(clearAv.dataset.avatarClear);
+    return;
+  }
   const open = event.target.closest("[data-open]");
   if (open) showView("person", open.dataset.open);
 });
@@ -749,6 +855,12 @@ $("cPole")?.addEventListener("change", () => {
   toggleNewActivityField($("cPole").value === "__new__");
 });
 document.addEventListener("change", (event) => {
+  const av = event.target.closest("[data-avatar-file]");
+  if (av && av.files && av.files[0]) {
+    uploadPersonAvatar(av.dataset.avatarFile, av.files[0]);
+    av.value = "";
+    return;
+  }
   const sel = event.target.closest("[data-classify]");
   if (!sel) return;
   const wrap = $("personPoleNewWrap");

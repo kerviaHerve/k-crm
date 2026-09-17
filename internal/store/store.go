@@ -38,6 +38,8 @@ type Person struct {
 	Why       string `json:"why,omitempty"`
 	Due       string `json:"due,omitempty"`
 	Channel   string `json:"channel,omitempty"`
+	Heat      string `json:"heat,omitempty"`
+	HasAvatar bool   `json:"has_avatar,omitempty"`
 }
 
 type Note struct {
@@ -50,7 +52,8 @@ type Note struct {
 
 type Fiche struct {
 	Person
-	Notes []Note `json:"notes"`
+	Notes    []Note    `json:"notes"`
+	Relances []Relance `json:"relances"`
 }
 
 type AujourdHui struct {
@@ -94,6 +97,7 @@ CREATE TABLE IF NOT EXISTS people (
   lead_state TEXT NOT NULL DEFAULT 'nouveau',
   phone TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL DEFAULT '',
+  heat TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS relances (
@@ -122,7 +126,10 @@ CREATE TABLE IF NOT EXISTS ingest (
   created_at TEXT NOT NULL
 );
 `)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.ensurePeopleHeat()
 }
 
 func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, error) {
@@ -151,9 +158,12 @@ func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, erro
 	if p.LeadState == "" {
 		p.LeadState = "nouveau"
 	}
-	if channel == "" {
-		channel = "tel"
+	heat, err := NormalizeHeat(p.Heat)
+	if err != nil {
+		return Person{}, err
 	}
+	p.Heat = heat
+	channel = NormalizeChannel(channel)
 	now := time.Now().UTC().Format(time.RFC3339)
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -161,9 +171,9 @@ func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, erro
 	}
 	defer func() { _ = tx.Rollback() }()
 	_, err = tx.Exec(
-		`INSERT INTO people (id,name,org,pole,world,lead,lead_state,phone,email,created_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?)`,
-		p.ID, p.Name, p.Org, p.Pole, p.World, p.Lead, p.LeadState, p.Phone, p.Email, now,
+		`INSERT INTO people (id,name,org,pole,world,lead,lead_state,phone,email,heat,created_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+		p.ID, p.Name, p.Org, p.Pole, p.World, p.Lead, p.LeadState, p.Phone, p.Email, p.Heat, now,
 	)
 	if err != nil {
 		return Person{}, err
@@ -183,34 +193,48 @@ func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, erro
 }
 
 func (s *Store) GetPerson(id string) (Person, error) {
-	row := s.db.QueryRow(`
-SELECT id,name,org,pole,world,lead,lead_state,phone,email,'','',''
-FROM people WHERE id=?`, id)
-	var p Person
-	err := row.Scan(&p.ID, &p.Name, &p.Org, &p.Pole, &p.World, &p.Lead, &p.LeadState, &p.Phone, &p.Email, &p.Due, &p.Why, &p.Channel)
+	row := s.db.QueryRow(`SELECT `+personCols+` FROM `+personFrom+` WHERE p.id=?`, id)
+	p, err := scanPerson(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Person{}, ErrNotFound
 	}
-	return p, err
+	if err != nil {
+		return Person{}, err
+	}
+	p.HasAvatar = s.HasPersonAvatar(p.ID)
+	return p, nil
 }
 
 func (s *Store) UpdatePerson(id string, in Person) (Person, error) {
-	cur, err := s.GetPerson(id)
-	if err != nil {
+	if _, err := s.GetPerson(id); err != nil {
 		return Person{}, err
 	}
 	name := strings.TrimSpace(in.Name)
 	if name == "" {
 		return Person{}, fmt.Errorf("name required")
 	}
-	_, err = s.db.Exec(`UPDATE people SET name=?, org=?, pole=?, lead=?, phone=?, email=? WHERE id=?`,
-		name, strings.TrimSpace(in.Org), strings.TrimSpace(in.Pole), strings.TrimSpace(in.Lead),
-		strings.TrimSpace(in.Phone), strings.TrimSpace(in.Email), id)
+	heat, err := NormalizeHeat(in.Heat)
 	if err != nil {
 		return Person{}, err
 	}
-	cur.Name, cur.Org, cur.Pole, cur.Lead, cur.Phone, cur.Email = name, strings.TrimSpace(in.Org), strings.TrimSpace(in.Pole), strings.TrimSpace(in.Lead), strings.TrimSpace(in.Phone), strings.TrimSpace(in.Email)
-	return cur, nil
+	_, err = s.db.Exec(`UPDATE people SET name=?, org=?, pole=?, lead=?, phone=?, email=?, heat=? WHERE id=?`,
+		name, strings.TrimSpace(in.Org), strings.TrimSpace(in.Pole), strings.TrimSpace(in.Lead),
+		strings.TrimSpace(in.Phone), strings.TrimSpace(in.Email), heat, id)
+	if err != nil {
+		return Person{}, err
+	}
+	if why := strings.TrimSpace(in.Why); why != "" {
+		if _, err := s.db.Exec(`UPDATE relances SET why=? WHERE person_id=? AND open=1`, why, id); err != nil {
+			return Person{}, err
+		}
+	}
+	if ch := strings.TrimSpace(in.Channel); ch != "" {
+		ch = NormalizeChannel(ch)
+		if _, err := s.db.Exec(`UPDATE relances SET channel=? WHERE person_id=? AND open=1`, ch, id); err != nil {
+			return Person{}, err
+		}
+	}
+	return s.GetPerson(id)
 }
 
 func (s *Store) Notes(personID string) ([]Note, error) {
@@ -239,7 +263,11 @@ func (s *Store) Fiche(id string) (Fiche, error) {
 	if err != nil {
 		return Fiche{}, err
 	}
-	return Fiche{Person: p, Notes: notes}, nil
+	relances, err := s.ListRelances(id)
+	if err != nil {
+		return Fiche{}, err
+	}
+	return Fiche{Person: p, Notes: notes, Relances: relances}, nil
 }
 
 func (s *Store) AddNote(personID, title, body string) (Note, error) {
@@ -302,11 +330,11 @@ func (s *Store) AujourdHui(now time.Time) (AujourdHui, error) {
 		return AujourdHui{}, err
 	}
 	out.Orphans, err = s.queryPeople(`
-		SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,'','',''
-		FROM people p
+		SELECT ` + personCols + `
+		FROM ` + personFrom + `
 		WHERE p.world='prospect'
 		  AND p.lead_state <> 'perdu'
-		  AND NOT EXISTS (SELECT 1 FROM relances r WHERE r.person_id=p.id AND r.open=1)
+		  AND NOT EXISTS (SELECT 1 FROM relances r2 WHERE r2.person_id=p.id AND r2.open=1)
 		ORDER BY p.name`)
 	if err != nil {
 		return AujourdHui{}, err
@@ -317,7 +345,7 @@ func (s *Store) AujourdHui(now time.Time) (AujourdHui, error) {
 func (s *Store) relancePeople(where string, arg string) ([]Person, error) {
 	q := `
 SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
-       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
+       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,''), COALESCE(p.heat,'')
 FROM relances r
 JOIN people p ON p.id=r.person_id
 WHERE ` + where + `
@@ -333,10 +361,11 @@ func (s *Store) queryPeople(q string, args ...any) ([]Person, error) {
 	defer rows.Close()
 	var out []Person
 	for rows.Next() {
-		var p Person
-		if err := rows.Scan(&p.ID, &p.Name, &p.Org, &p.Pole, &p.World, &p.Lead, &p.LeadState, &p.Phone, &p.Email, &p.Due, &p.Why, &p.Channel); err != nil {
+		p, err := scanPerson(rows)
+		if err != nil {
 			return nil, err
 		}
+		p.HasAvatar = s.HasPersonAvatar(p.ID)
 		out = append(out, p)
 	}
 	if out == nil {

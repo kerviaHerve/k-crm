@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -120,7 +121,7 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 		return textResult(out)
 	case "crm_creer_personne":
 		var args struct {
-			Name, Org, Pole, Lead, Phone, Email, Due, Why, Channel string
+			Name, Org, Pole, Lead, Phone, Email, Due, Why, Channel, Heat string
 		}
 		if len(p.Arguments) > 0 {
 			if err := json.Unmarshal(p.Arguments, &args); err != nil {
@@ -129,7 +130,7 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 		}
 		person, err := s.Store.CreateProspect(store.Person{
 			Name: args.Name, Org: args.Org, Pole: args.Pole, Lead: args.Lead,
-			Phone: args.Phone, Email: args.Email,
+			Phone: args.Phone, Email: args.Email, Heat: args.Heat,
 		}, args.Due, args.Why, args.Channel)
 		if err != nil {
 			return nil, err
@@ -298,7 +299,7 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 		return textResult(person)
 	case "crm_modifier":
 		var args struct {
-			ID, Name, Org, Pole, Lead, Phone, Email string
+			ID, Name, Org, Pole, Lead, Phone, Email, Why, Channel, Heat string
 		}
 		if len(p.Arguments) > 0 {
 			if err := json.Unmarshal(p.Arguments, &args); err != nil {
@@ -307,12 +308,72 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 		}
 		person, err := s.Store.UpdatePerson(args.ID, store.Person{
 			Name: args.Name, Org: args.Org, Pole: args.Pole, Lead: args.Lead,
-			Phone: args.Phone, Email: args.Email,
+			Phone: args.Phone, Email: args.Email, Why: args.Why, Channel: args.Channel, Heat: args.Heat,
 		})
 		if err != nil {
 			return nil, err
 		}
 		return textResult(person)
+	case "crm_supprimer_relance":
+		var args struct {
+			ID, RelanceID, Due, Why, Channel string
+			RID                              string `json:"relance_id"`
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		rid := args.RelanceID
+		if rid == "" {
+			rid = args.RID
+		}
+		person, err := s.Store.DeleteRelance(args.ID, rid, args.Due, args.Why, args.Channel)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_reactiver":
+		var args struct {
+			ID, Due, Why, Channel string
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		person, err := s.Store.Reactivate(args.ID, args.Due, args.Why, args.Channel)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(person)
+	case "crm_avatar_personne":
+		var args struct {
+			ID, Path, Clear string
+		}
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &args); err != nil {
+				return nil, err
+			}
+		}
+		if strings.EqualFold(strings.TrimSpace(args.Clear), "true") || strings.TrimSpace(args.Clear) == "1" {
+			if err := s.Store.ClearPersonAvatar(args.ID); err != nil {
+				return nil, err
+			}
+			return textResult(map[string]any{"ok": true, "has_avatar": false})
+		}
+		path := strings.TrimSpace(args.Path)
+		if path == "" {
+			return nil, fmt.Errorf("path or clear required")
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("unreadable image")
+		}
+		if err := s.Store.SetPersonAvatar(args.ID, raw); err != nil {
+			return nil, err
+		}
+		return textResult(map[string]any{"ok": true, "has_avatar": true})
 	case "crm_exporter":
 		var buf bytes.Buffer
 		if err := s.Store.WriteCSV(&buf, s.now()); err != nil {

@@ -434,7 +434,16 @@ button { touch-action: manipulation; }
   background: var(--k-primary);
   font-size: var(--k-font-label-current);
   font-weight: 700;
+  flex: none;
 }
+img.avatar {
+  object-fit: cover;
+  padding: 0;
+  color: transparent;
+}
+.chip.heat-froid { border-color: var(--k-border-strong); }
+.chip.heat-tiede { border-color: var(--k-warning); }
+.chip.heat-chaud { border-color: var(--k-destructive); }
 
 .meta {
   display: flex;

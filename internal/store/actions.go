@@ -70,9 +70,7 @@ func (s *Store) PlanRelance(personID, due, why, channel string) (Person, error) 
 	if why == "" {
 		return Person{}, fmt.Errorf("relance why required")
 	}
-	if channel == "" {
-		channel = "tel"
-	}
+	channel = NormalizeChannel(channel)
 	now := time.Now().UTC().Format(time.RFC3339)
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -146,6 +144,7 @@ func (s *Store) CompleteRelance(personID, due, why, channel string) (Person, err
 	if channel == "" {
 		channel = "tel"
 	}
+	channel = NormalizeChannel(channel)
 	now := time.Now().UTC().Format(time.RFC3339)
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -268,9 +267,7 @@ func digits(s string) string {
 }
 
 func (s *Store) FindDuplicate(p Person) (Person, bool, error) {
-	all, err := s.queryPeople(`
-SELECT id,name,org,pole,world,lead,lead_state,phone,email,'','',''
-FROM people`)
+	all, err := s.queryPeople(`SELECT ` + personCols + ` FROM ` + personFrom)
 	if err != nil {
 		return Person{}, false, err
 	}
@@ -292,17 +289,11 @@ FROM people`)
 }
 
 func (s *Store) ListLost() ([]Person, error) {
-	return s.queryPeople(`
-SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,'','',''
-FROM people p WHERE p.lead_state='perdu' ORDER BY p.name`)
+	return s.queryPeople(`SELECT ` + personCols + ` FROM ` + personFrom + ` WHERE p.lead_state='perdu' ORDER BY p.name`)
 }
 
 func (s *Store) OpenRelance(id string) (Person, error) {
-	list, err := s.queryPeople(`
-SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
-       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
-FROM people p
-LEFT JOIN relances r ON r.person_id=p.id AND r.open=1
+	list, err := s.queryPeople(`SELECT `+personCols+` FROM `+personFrom+`
 WHERE p.id=?
 ORDER BY r.due DESC
 LIMIT 1`, id)
@@ -355,12 +346,7 @@ func (s *Store) SearchHits(q string) ([]SearchHit, error) {
 	if len(tokens) == 0 {
 		return []SearchHit{}, nil
 	}
-	people, err := s.queryPeople(`
-SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
-       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
-FROM people p
-LEFT JOIN relances r ON r.person_id=p.id AND r.open=1
-ORDER BY p.name`)
+	people, err := s.queryPeople(`SELECT ` + personCols + ` FROM ` + personFrom + ` ORDER BY p.name`)
 	if err != nil {
 		return nil, err
 	}
@@ -389,6 +375,7 @@ ORDER BY p.name`)
 			"phone":   p.Phone,
 			"relance": p.Why,
 			"etat":    p.LeadState + " " + p.World,
+			"chaleur": p.Heat,
 		}
 		ok := true
 		for _, tok := range tokens {
@@ -468,11 +455,7 @@ func sortHits(hits []SearchHit) {
 }
 
 func (s *Store) ListWorld(world string) ([]Person, error) {
-	return s.queryPeople(`
-SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
-       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
-FROM people p
-LEFT JOIN relances r ON r.person_id=p.id AND r.open=1
+	return s.queryPeople(`SELECT `+personCols+` FROM `+personFrom+`
 WHERE p.world=?
 ORDER BY p.name`, world)
 }
@@ -523,12 +506,7 @@ func classify(p Person, day string, weekEnd string) (when, label, next string) {
 func (s *Store) Snapshot(now time.Time) (State, error) {
 	day := now.UTC().Format("2006-01-02")
 	weekEnd := now.UTC().AddDate(0, 0, 7).Format("2006-01-02")
-	people, err := s.queryPeople(`
-SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
-       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
-FROM people p
-LEFT JOIN relances r ON r.person_id=p.id AND r.open=1
-ORDER BY p.name`)
+	people, err := s.queryPeople(`SELECT ` + personCols + ` FROM ` + personFrom + ` ORDER BY p.name`)
 	if err != nil {
 		return State{}, err
 	}
@@ -586,11 +564,11 @@ func (s *Store) WriteCSV(w io.Writer, now time.Time) error {
 		return err
 	}
 	cw := csv.NewWriter(w)
-	if err := cw.Write([]string{"id", "name", "org", "pole", "world", "lead_state", "lead", "phone", "email", "due", "why", "when"}); err != nil {
+	if err := cw.Write([]string{"id", "name", "org", "pole", "world", "lead_state", "lead", "phone", "email", "due", "why", "channel", "heat", "when"}); err != nil {
 		return err
 	}
 	for _, p := range st.People {
-		if err := cw.Write([]string{p.ID, p.Name, p.Org, p.Pole, p.World, p.LeadState, p.Lead, p.Phone, p.Email, p.Due, p.Why, p.When}); err != nil {
+		if err := cw.Write([]string{p.ID, p.Name, p.Org, p.Pole, p.World, p.LeadState, p.Lead, p.Phone, p.Email, p.Due, p.Why, p.Channel, p.Heat, p.When}); err != nil {
 			return err
 		}
 	}
@@ -652,6 +630,7 @@ func (s *Store) ImportProspects(r io.Reader) (ImportResult, error) {
 			Lead:  get("lead"),
 			Phone: get("phone"),
 			Email: get("email"),
+			Heat:  get("heat"),
 		}
 		due, why, channel := get("due"), get("why"), get("channel")
 		if _, err := s.CreateProspect(p, due, why, channel); err != nil {

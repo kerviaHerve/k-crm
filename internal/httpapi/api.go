@@ -39,6 +39,7 @@ type createBody struct {
 	Due     string `json:"due"`
 	Why     string `json:"why"`
 	Channel string `json:"channel"`
+	Heat    string `json:"heat"`
 }
 
 func (s *Server) now() time.Time {
@@ -134,6 +135,19 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_modifier", s.auth(s.mailUpdate))
 	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_supprimer", s.auth(s.mailDelete))
 	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_tester", s.auth(s.mailTest))
+	mux.HandleFunc("POST /ui/api/people/{id}/reactivate", s.reactivate)
+	mux.HandleFunc("POST /api/v1/people/{id}/reactivate", s.auth(s.reactivate))
+	mux.HandleFunc("POST /api/v1/tools/crm_reactiver", s.auth(s.reactivateTool))
+	mux.HandleFunc("POST /ui/api/people/{id}/relance/drop", s.dropRelance)
+	mux.HandleFunc("POST /api/v1/people/{id}/relance/drop", s.auth(s.dropRelance))
+	mux.HandleFunc("POST /api/v1/tools/crm_supprimer_relance", s.auth(s.dropRelanceTool))
+	mux.HandleFunc("GET /ui/api/people/{id}/avatar", s.personAvatarGet)
+	mux.HandleFunc("POST /ui/api/people/{id}/avatar", s.personAvatarUpload)
+	mux.HandleFunc("DELETE /ui/api/people/{id}/avatar", s.personAvatarClear)
+	mux.HandleFunc("GET /api/v1/people/{id}/avatar", s.auth(s.personAvatarGet))
+	mux.HandleFunc("POST /api/v1/people/{id}/avatar", s.auth(s.personAvatarUpload))
+	mux.HandleFunc("DELETE /api/v1/people/{id}/avatar", s.auth(s.personAvatarClear))
+	mux.HandleFunc("POST /api/v1/tools/crm_avatar_personne", s.auth(s.personAvatarTool))
 	mux.HandleFunc("GET /ui/api/backups", s.backupsList)
 	mux.HandleFunc("POST /ui/api/backups", s.backupsCreate)
 	mux.HandleFunc("GET /ui/api/backups/{name}", s.backupsGet)
@@ -193,6 +207,7 @@ func (s *Server) createProspect(w http.ResponseWriter, r *http.Request) {
 		Lead:  body.Lead,
 		Phone: body.Phone,
 		Email: body.Email,
+		Heat:  body.Heat,
 	}, body.Due, body.Why, body.Channel)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
@@ -214,7 +229,7 @@ func storeHTTP(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusNotFound, err.Error())
 		return
 	}
-	if errors.Is(err, store.ErrNotProspect) || errors.Is(err, store.ErrLost) || errors.Is(err, store.ErrDuplicate) {
+	if errors.Is(err, store.ErrNotProspect) || errors.Is(err, store.ErrLost) || errors.Is(err, store.ErrDuplicate) || errors.Is(err, store.ErrNotLost) {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}

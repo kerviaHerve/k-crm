@@ -21,7 +21,7 @@ func All() []Tool {
 			Description: "Cree un prospect. due (YYYY-MM-DD) et why sont obligatoires. Jamais un client. pole = activite libre; une valeur neuve entre dans le catalogue.",
 			HTTP:        []string{"POST /api/v1/prospects", "POST /api/v1/tools/crm_creer_personne"},
 			Required:    []string{"name", "due", "why"},
-			Properties:  map[string]any{"name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str, "due": str, "why": str, "channel": str},
+			Properties:  map[string]any{"name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str, "due": str, "why": str, "channel": str, "heat": str},
 		},
 		{
 			Name:        "crm_fiche",
@@ -74,10 +74,31 @@ func All() []Tool {
 		},
 		{
 			Name:        "crm_modifier",
-			Description: "Met a jour nom, org, activite (pole), lead, phone, email. Ne change jamais le monde.",
+			Description: "Met a jour nom, org, activite (pole), lead, phone, email, motif de relance (why), canal, chaleur. Ne change jamais le monde.",
 			HTTP:        []string{"POST /api/v1/people/{id}", "POST /api/v1/tools/crm_modifier"},
 			Required:    []string{"id", "name"},
-			Properties:  map[string]any{"id": str, "name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str},
+			Properties:  map[string]any{"id": str, "name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str, "why": str, "channel": str, "heat": str},
+		},
+		{
+			Name:        "crm_supprimer_relance",
+			Description: "Supprime une relance. Prospect actif: due et why de remplacement obligatoires. Client: la suivante est optionnelle.",
+			HTTP:        []string{"POST /api/v1/people/{id}/relance/drop", "POST /api/v1/tools/crm_supprimer_relance"},
+			Required:    []string{"id"},
+			Properties:  map[string]any{"id": str, "relance_id": str, "due": str, "why": str, "channel": str},
+		},
+		{
+			Name:        "crm_reactiver",
+			Description: "Repasse un prospect perdu en actif. due et why obligatoires. Reste un prospect.",
+			HTTP:        []string{"POST /api/v1/people/{id}/reactivate", "POST /api/v1/tools/crm_reactiver"},
+			Required:    []string{"id", "due", "why"},
+			Properties:  map[string]any{"id": str, "due": str, "why": str, "channel": str},
+		},
+		{
+			Name:        "crm_avatar_personne",
+			Description: "Pose ou retire l'avatar d'une personne. path = fichier jpeg/png local. clear=true pour retirer.",
+			HTTP:        []string{"POST /api/v1/people/{id}/avatar", "POST /api/v1/tools/crm_avatar_personne"},
+			Required:    []string{"id"},
+			Properties:  map[string]any{"id": str, "path": str, "clear": map[string]any{"type": "string"}},
 		},
 		{
 			Name:        "crm_chercher",

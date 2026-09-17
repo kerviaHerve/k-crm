@@ -137,7 +137,7 @@ func (s *Server) updatePerson(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := s.Store.UpdatePerson(r.PathValue("id"), store.Person{
 		Name: body.Name, Org: body.Org, Pole: body.Pole, Lead: body.Lead,
-		Phone: body.Phone, Email: body.Email,
+		Phone: body.Phone, Email: body.Email, Why: body.Why, Channel: body.Channel, Heat: body.Heat,
 	})
 	if err != nil {
 		storeHTTP(w, err)
@@ -275,7 +275,7 @@ func (s *Server) relancePlanTool(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) updatePersonTool(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		ID, Name, Org, Pole, Lead, Phone, Email string
+		ID, Name, Org, Pole, Lead, Phone, Email, Why, Channel, Heat string
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid json")
@@ -283,7 +283,7 @@ func (s *Server) updatePersonTool(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := s.Store.UpdatePerson(body.ID, store.Person{
 		Name: body.Name, Org: body.Org, Pole: body.Pole, Lead: body.Lead,
-		Phone: body.Phone, Email: body.Email,
+		Phone: body.Phone, Email: body.Email, Why: body.Why, Channel: body.Channel, Heat: body.Heat,
 	})
 	if err != nil {
 		storeHTTP(w, err)
