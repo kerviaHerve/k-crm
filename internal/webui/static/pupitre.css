@@ -522,6 +522,16 @@ a.chip { text-decoration: none; color: inherit; }
   width: 28px; height: 3px; background: var(--line);
 }
 .step-dots span[aria-current="true"] { background: var(--copper); }
+.totp-qr {
+  display: block;
+  width: 180px;
+  height: 180px;
+  padding: 12px;
+  margin: 4px 0 0;
+  background: #fff;
+  border-radius: 2px;
+  image-rendering: pixelated;
+}
 .secret-box {
   padding: 12px 0;
   border-top: 1px solid var(--line);

@@ -823,6 +823,16 @@ $("totpStartForm")?.addEventListener("submit", async (event) => {
       code: $("totpOld").value.trim()
     });
     $("totpSecret").textContent = data.secret;
+    const qr = $("totpQR");
+    if (qr) {
+      if (typeof data.qr === "string" && data.qr.startsWith("data:image/png")) {
+        qr.src = data.qr;
+        qr.hidden = false;
+      } else {
+        qr.removeAttribute("src");
+        qr.hidden = true;
+      }
+    }
     $("totpConfirmForm").hidden = false;
     $("totpNew").focus();
   } catch (err) {
@@ -837,6 +847,8 @@ $("totpConfirmForm")?.addEventListener("submit", async (event) => {
     $("totpStartForm").reset();
     $("totpConfirmForm").reset();
     $("totpConfirmForm").hidden = true;
+    const qr = $("totpQR");
+    if (qr) { qr.removeAttribute("src"); qr.hidden = true; }
     toast("Nouveau 2FA actif.");
   } catch (err) {
     $("totpErr").textContent = err.message;

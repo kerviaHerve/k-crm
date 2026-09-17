@@ -154,7 +154,7 @@ func TestWizardThenLogin(t *testing.T) {
 	if err := json.Unmarshal(start.Body.Bytes(), &started); err != nil {
 		t.Fatal(err)
 	}
-	if started["secret"] == "" || started["otpauth"] == "" {
+	if started["secret"] == "" || started["otpauth"] == "" || !strings.HasPrefix(started["qr"], "data:image/png;base64,") {
 		t.Fatal("missing totp material")
 	}
 

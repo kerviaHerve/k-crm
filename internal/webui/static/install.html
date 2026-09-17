@@ -107,7 +107,9 @@
           </form>
 
           <form class="gate-form" id="step5" hidden>
-            <p class="intro" style="margin:0">Ajoute ce secret dans l’authenticator, puis le code à six chiffres.</p>
+            <p class="intro" style="margin:0">Scanne le QR avec l’authenticator, puis saisis le code à six chiffres.</p>
+            <img id="qr" class="totp-qr" alt="QR code 2FA" hidden>
+            <p class="gate-note" style="margin-top:8px">Le secret reste là si tu dois le taper à la main.</p>
             <p class="secret-box" id="secret"></p>
             <div class="field">
               <label for="code">Code 2FA</label>
@@ -200,6 +202,14 @@
           password: pw.value
         });
         document.getElementById("secret").textContent = data.secret;
+        const qr = document.getElementById("qr");
+        if (typeof data.qr === "string" && data.qr.startsWith("data:image/png")) {
+          qr.src = data.qr;
+          qr.hidden = false;
+        } else {
+          qr.removeAttribute("src");
+          qr.hidden = true;
+        }
         show("step5"); setStep(5); document.getElementById("code").focus();
       } catch (ex) { err(ex.message); }
     });

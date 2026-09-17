@@ -5,11 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base32"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 func NewTOTPSecret() (string, error) {
@@ -52,5 +56,21 @@ func VerifyTOTP(secret, code string, now time.Time) bool {
 }
 
 func OTPAuthURL(user, secret string) string {
-	return fmt.Sprintf("otpauth://totp/K-CRM:%s?secret=%s&issuer=K-CRM&digits=6&period=30", user, secret)
+	user = strings.TrimSpace(user)
+	secret = strings.TrimSpace(secret)
+	q := url.Values{}
+	q.Set("secret", secret)
+	q.Set("issuer", "K-CRM")
+	q.Set("digits", "6")
+	q.Set("period", "30")
+	return "otpauth://totp/" + url.PathEscape("K-CRM") + ":" + url.PathEscape(user) + "?" + q.Encode()
+}
+
+func TOTPQR(user, secret string) (otpauth, qr string, err error) {
+	otpauth = OTPAuthURL(user, secret)
+	png, err := qrcode.Encode(otpauth, qrcode.Medium, 256)
+	if err != nil {
+		return otpauth, "", err
+	}
+	return otpauth, "data:image/png;base64," + base64.StdEncoding.EncodeToString(png), nil
 }

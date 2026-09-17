@@ -1,8 +1,10 @@
 package setup
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -80,5 +82,29 @@ func TestWizardCommitAndLogin(t *testing.T) {
 	}
 	if !f.Verify("herve", "newhorsebattery", code, now) {
 		t.Fatal("new password rejected")
+	}
+}
+
+func TestTOTPQR(t *testing.T) {
+	otpauth, qr, err := TOTPQR("herve", "MFRGGZDFMZTWQ2LK")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(otpauth, "otpauth://totp/K-CRM:herve?") {
+		t.Fatalf("otpauth=%s", otpauth)
+	}
+	if !strings.Contains(otpauth, "secret=MFRGGZDFMZTWQ2LK") || !strings.Contains(otpauth, "issuer=K-CRM") {
+		t.Fatalf("otpauth missing fields %s", otpauth)
+	}
+	const prefix = "data:image/png;base64,"
+	if !strings.HasPrefix(qr, prefix) {
+		t.Fatalf("qr prefix %s", qr[:min(40, len(qr))])
+	}
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(qr, prefix))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) < 100 || string(raw[:8]) != "\x89PNG\r\n\x1a\n" {
+		t.Fatalf("not a png len=%d", len(raw))
 	}
 }

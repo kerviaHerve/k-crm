@@ -162,9 +162,15 @@ func (s *Server) installStart(w http.ResponseWriter, r *http.Request) {
 		Listen: body.Listen, Domain: body.Domain, HTTPS: body.HTTPS,
 		User: strings.TrimSpace(body.User), PassHash: hash, TOTP: sec,
 	}
+	otpauth, qr, err := setup.TOTPQR(s.pending.User, sec)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "totp qr")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]string{
-		"otpauth": setup.OTPAuthURL(s.pending.User, sec),
+		"otpauth": otpauth,
 		"secret":  sec,
+		"qr":      qr,
 	})
 }
 

@@ -103,10 +103,16 @@ func (s *Server) totpStart(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "totp")
 		return
 	}
+	otpauth, qr, err := setup.TOTPQR(s.Setup.User(), sec)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "totp qr")
+		return
+	}
 	s.pendingTOTP = sec
 	writeJSON(w, http.StatusOK, map[string]string{
 		"secret":  sec,
-		"otpauth": setup.OTPAuthURL(s.Setup.User(), sec),
+		"otpauth": otpauth,
+		"qr":      qr,
 	})
 }
 

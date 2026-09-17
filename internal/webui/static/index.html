@@ -272,6 +272,8 @@
                 <button class="btn" type="submit">Générer un nouveau secret</button>
               </form>
               <form class="gate-form" id="totpConfirmForm" hidden>
+                <img id="totpQR" class="totp-qr" alt="QR code 2FA" hidden>
+                <p class="gate-note" style="margin-top:8px">Scanne, ou tape le secret.</p>
                 <p class="secret-box" id="totpSecret"></p>
                 <div class="field"><label for="totpNew">Nouveau code</label><input id="totpNew" inputmode="numeric" maxlength="6" required></div>
                 <button class="btn primary" type="submit">Activer ce 2FA</button>
