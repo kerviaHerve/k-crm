@@ -10,17 +10,47 @@ GO_MIN_MAJOR=1
 GO_MIN_MINOR=26
 GO_TARBALL_VER="1.26.5"
 BIN="$ROOT/k-crm"
-NEED_TTY=1
+DRY_RUN=0
+LISTEN_FLAG=""
+DATA_FLAG=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1; shift ;;
+    --listen)
+      LISTEN_FLAG="${2-}"
+      shift 2
+      ;;
+    --data)
+      DATA_FLAG="${2-}"
+      shift 2
+      ;;
+    -h|--help)
+      printf '%s\n' "Usage: ./install.sh [--listen IP:PORT] [--data DIR] [--dry-run]"
+      exit 0
+      ;;
+    *)
+      printf 'Erreur: option inconnue %s\n' "$1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 say() { printf '%s\n' "$*"; }
 err() { printf 'Erreur: %s\n' "$*" >&2; }
 pause() {
-  if [[ -t 0 ]]; then
+  if [[ -t 0 && "$DRY_RUN" -eq 0 ]]; then
     read -r -p "Entree pour continuer. " _
   fi
 }
 
 need_tty() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    return 0
+  fi
+  if [[ -n "$LISTEN_FLAG" && -n "$DATA_FLAG" ]]; then
+    return 0
+  fi
   if [[ ! -t 0 || ! -t 1 ]]; then
     err "lance ce script dans un terminal (pas en pipe)."
     exit 1
@@ -109,17 +139,48 @@ install_go_tarball() {
   printf '%s' "$dest/bin/go"
 }
 
+ip_kind() {
+  case "$1" in
+    127.*|::1) printf 'loopback' ;;
+    100.*) printf 'overlay' ;;
+    10.*|192.168.*) printf 'lan' ;;
+    172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) printf 'docker' ;;
+    *) printf 'public' ;;
+  esac
+}
+
 list_ips() {
-  local ip
-  if command -v hostname >/dev/null 2>&1; then
-    for ip in $(hostname -I 2>/dev/null || true); do
-      case "$ip" in
-        0.0.0.0|::|::1) continue ;;
-        *:*) continue ;;
-        *) printf '%s\n' "$ip" ;;
-      esac
-    done
-  fi
+  python3 - <<'PY'
+import subprocess, ipaddress
+raw = subprocess.check_output(["hostname", "-I"], text=True, stderr=subprocess.DEVNULL)
+seen = []
+for tok in raw.split():
+    try:
+        ip = ipaddress.ip_address(tok)
+    except ValueError:
+        continue
+    if ip.version != 4 or ip.is_unspecified or ip.is_loopback or ip.is_multicast:
+        continue
+    s = str(ip)
+    if s not in seen:
+        seen.append(s)
+
+def kind(s):
+    ip = ipaddress.ip_address(s)
+    if ip in ipaddress.ip_network("100.64.0.0/10"):
+        return 0, "overlay"
+    if ip in ipaddress.ip_network("10.0.0.0/8") or ip in ipaddress.ip_network("192.168.0.0/16"):
+        return 1, "lan"
+    if ip in ipaddress.ip_network("172.16.0.0/12"):
+        return 3, "docker"
+    return 2, "public"
+
+ranked = sorted(seen, key=lambda s: (kind(s)[0], s))
+primary = [s for s in ranked if kind(s)[1] != "docker"]
+show = primary or ranked
+for s in show:
+    print(s, kind(s)[1])
+PY
 }
 
 # 0 = free, 1 = taken, 2 = IP not on this machine
@@ -163,6 +224,80 @@ refuse_wildcard() {
   esac
 }
 
+resolve_host_choice() {
+  local raw="$1"
+  local n
+  if [[ "$raw" =~ ^[0-9]+$ ]]; then
+    n=$((raw))
+    if (( n < 1 || n > ${#IPS[@]} )); then
+      err "le numero $raw n'est pas dans la liste (1-${#IPS[@]})."
+      return 1
+    fi
+    printf '%s' "${IPS[$((n - 1))]}"
+    return 0
+  fi
+  printf '%s' "$raw"
+}
+
+choose_listen() {
+  local i extra kind reply
+  mapfile -t IP_ROWS < <(list_ips)
+  IPS=()
+  KINDS=()
+  for row in "${IP_ROWS[@]:-}"; do
+    [[ -n "$row" ]] || continue
+    IPS+=("${row%% *}")
+    KINDS+=("${row#* }")
+  done
+  if ((${#IPS[@]} == 0)); then
+    say "Aucune IP non-loopback vue. 127.0.0.1 ne sera visible que sur cette machine."
+    IPS=(127.0.0.1)
+    KINDS=(loopback)
+  fi
+  say "Adresses utiles (les ponts Docker sont masques):"
+  i=1
+  for ip in "${IPS[@]}"; do
+    kind="${KINDS[$((i - 1))]}"
+    extra=""
+    case "$kind" in
+      overlay) extra=" (overlay, recommandee)" ;;
+      lan) extra=" (reseau local)" ;;
+      public) extra=" (publique, visible depuis Internet)" ;;
+      loopback) extra=" (cette machine seulement)" ;;
+    esac
+    say "  $i) $ip$extra"
+    i=$((i + 1))
+  done
+  DEFAULT_IP="${IPS[0]}"
+  reply="$(ask "IP a binder (numero ou adresse)" "$DEFAULT_IP")"
+  HOST="$(resolve_host_choice "$reply")" || exit 1
+  if refuse_wildcard "$HOST"; then
+    err "refus de binder $HOST — passe une IP explicite."
+    exit 1
+  fi
+  PROBE_RC=0
+  probe_port "$HOST" 8740 || PROBE_RC=$?
+  if [[ "$PROBE_RC" -eq 2 ]]; then
+    err "$HOST n'est pas une adresse de cette machine. Tape un numero de la liste, ou l'IP complete."
+    exit 1
+  fi
+  if ! DEFAULT_PORT="$(find_free_port "$HOST")"; then
+    err "aucun port libre entre 8740 et 8899 sur $HOST."
+    exit 1
+  fi
+  say "Port libre propose: $DEFAULT_PORT"
+  PORT="$(ask "Port" "$DEFAULT_PORT")"
+  if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
+    err "port invalide: $PORT"
+    exit 1
+  fi
+  LISTEN="${HOST}:${PORT}"
+  if port_taken "$HOST" "$PORT"; then
+    err "$LISTEN est pris. Le script proposait $DEFAULT_PORT."
+    exit 1
+  fi
+}
+
 need_tty
 
 say "K-CRM — bootstrap"
@@ -196,7 +331,7 @@ if ! command -v go >/dev/null 2>&1 || ! go_ver_ok "$(command -v go)"; then
   err "Go n'est toujours pas utilisable."
   exit 1
 fi
-if ! grep -q 'go1.26\|/.local/share/go' "$HOME/.profile" 2>/dev/null; then
+if [[ "$DRY_RUN" -eq 0 ]] && ! grep -q 'go1.26\|/.local/share/go' "$HOME/.profile" 2>/dev/null; then
   if yesno "Ajouter Go au PATH dans ~/.profile pour les prochains terminaux ? [o/N]" n; then
     {
       printf '\n# K-CRM Go\n'
@@ -218,59 +353,36 @@ pause
 
 say ""
 say "3/4  Adresse d'ecoute (IP explicite, jamais 0.0.0.0)"
-mapfile -t IPS < <(list_ips | awk 'NF && !seen[$0]++')
-if ((${#IPS[@]})); then
-  say "Adresses vues sur cette machine:"
-  local_i=1
-  for ip in "${IPS[@]}"; do
-    extra=""
-    [[ "$ip" == 127.* ]] && extra=" (cette machine seulement)"
-    say "  $local_i) $ip$extra"
-    local_i=$((local_i + 1))
-  done
+if [[ -n "$LISTEN_FLAG" ]]; then
+  LISTEN="$LISTEN_FLAG"
+  HOST="${LISTEN%:*}"
+  PORT="${LISTEN##*:}"
+  if refuse_wildcard "$HOST"; then
+    err "refus de binder $HOST"
+    exit 1
+  fi
+  say "Listen (flag): $LISTEN"
 else
-  say "Aucune IP non-loopback vue. 127.0.0.1 ne sera visible que sur cette machine."
-  IPS=(127.0.0.1)
-fi
-DEFAULT_IP="${IPS[0]}"
-HOST="$(ask "IP a binder" "$DEFAULT_IP")"
-if refuse_wildcard "$HOST"; then
-  err "refus de binder $HOST — passe une IP explicite."
-  exit 1
-fi
-PROBE_RC=0
-probe_port "$HOST" 8740 || PROBE_RC=$?
-if [[ "$PROBE_RC" -eq 2 ]]; then
-  err "$HOST n'est pas une adresse de cette machine. Reprends avec une IP de la liste."
-  exit 1
-fi
-if ! DEFAULT_PORT="$(find_free_port "$HOST")"; then
-  err "aucun port libre entre 8740 et 8899 sur $HOST."
-  exit 1
-fi
-say "Port libre propose: $DEFAULT_PORT"
-PORT="$(ask "Port" "$DEFAULT_PORT")"
-if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
-  err "port invalide: $PORT"
-  exit 1
-fi
-LISTEN="${HOST}:${PORT}"
-if port_taken "$HOST" "$PORT"; then
-  err "$LISTEN est pris. Le script proposait $DEFAULT_PORT."
-  exit 1
+  choose_listen
 fi
 say "Listen: $LISTEN"
 pause
 
 say ""
 say "4/4  Donnees (carnet, jeton, sessions). Pas le carnet d'une autre install."
-DATA="$(ask "Dossier data" "$ROOT/data")"
+if [[ -n "$DATA_FLAG" ]]; then
+  DATA="$DATA_FLAG"
+else
+  DATA="$(ask "Dossier data" "$ROOT/data")"
+fi
 mkdir -p "$DATA"
 chmod 700 "$DATA" 2>/dev/null || true
 if [[ -f "$DATA/config.json" ]]; then
   say "Attention: $DATA a deja une install (config.json). Le wizard ne se relancera pas."
-  if ! yesno "Continuer quand meme ? [o/N]" n; then
-    exit 1
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    if ! yesno "Continuer quand meme ? [o/N]" n; then
+      exit 1
+    fi
   fi
 fi
 say "Data: $DATA"
@@ -278,5 +390,10 @@ say ""
 say "Le wizard s'ouvre sur: http://${LISTEN}/"
 say "Identifiant / mot de passe / 2FA se saisissent dans le navigateur, pas ici."
 pause
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  say "Dry-run: pas de lancement. $BIN serve -listen $LISTEN -data $DATA"
+  exit 0
+fi
 
 exec "$BIN" serve -listen "$LISTEN" -data "$DATA"
