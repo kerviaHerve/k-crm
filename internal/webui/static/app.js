@@ -659,6 +659,11 @@ $("importFile").addEventListener("change", async (event) => {
   }
 });
 
+function setOwner(user) {
+  const el = $("ownerName");
+  if (el) el.textContent = user || "";
+}
+
 function setAvatar(has) {
   ["ownerAvatar", "settingsAvatar"].forEach((id) => {
     const img = $(id);
@@ -691,6 +696,7 @@ async function loadSettings() {
   try {
     const data = await api("GET", "/ui/api/settings");
     $("settingsUser").textContent = data.user || "—";
+    setOwner(data.user);
     const fb = $("settingsAvatarFallback");
     if (fb) fb.textContent = (data.user || "?").slice(0, 1).toUpperCase();
     setAvatar(!!data.has_avatar);
@@ -1026,6 +1032,9 @@ $("ingestForm")?.addEventListener("submit", async (event) => {
 
 setTheme(document.documentElement.dataset.theme);
 loadState().then(() => {
-  fetch("/ui/api/settings").then((r) => r.json()).then((d) => setAvatar(!!d.has_avatar)).catch(() => {});
+  fetch("/ui/api/settings").then((r) => r.json()).then((d) => {
+    setAvatar(!!d.has_avatar);
+    setOwner(d.user);
+  }).catch(() => {});
   showView("today");
 }).catch((err) => toast(err.message));

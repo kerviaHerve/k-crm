@@ -27,21 +27,23 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="brand-product">
-        <div class="product-name">K-CRM</div>
-        <div class="product-copy">pupitre</div>
+        <div class="brand-mark" aria-hidden="true">K</div>
+        <div class="brand-text">
+          <div class="product-name">K-CRM</div>
+          <div class="product-copy">Dashboard</div>
+        </div>
       </div>
       <nav class="nav" aria-label="Navigation">
         <button class="nav-btn" type="button" aria-current="page">Installer</button>
       </nav>
       <div class="sidebar-foot">
-        <strong>Premier lancement</strong>
-        <span>Six gestes, un utilisateur, 2FA</span>
+        <strong id="ownerName">Installation</strong>
       </div>
     </aside>
     <main class="main">
       <header class="topbar">
         <div class="crumb">
-          <small>Pupitre</small>
+          <small>Dashboard</small>
           <strong>Installation</strong>
         </div>
       </header>
@@ -122,7 +124,7 @@
           <section id="done" hidden>
             <p class="intro" id="doneNote">Jeton agent, une seule fois. Copie-le. Il ne reviendra pas à l’écran.</p>
             <p class="secret-box" id="tokenOnce"></p>
-            <a class="btn primary gate-submit" href="/" style="display:grid;place-items:center;text-decoration:none">Ouvrir le pupitre</a>
+            <a class="btn primary gate-submit" href="/" style="display:grid;place-items:center;text-decoration:none">Ouvrir le dashboard</a>
           </section>
         </section>
       </section>
@@ -135,7 +137,7 @@
       "Un nom interne, pas une pub internet.",
       "TLS seulement si un proxy le termine.",
       "Un compte. Pas d’équipe.",
-      "Sans le code, le pupitre reste fermé.",
+      "Sans le code, le dashboard reste fermé.",
       "Ensuite tu te connectes. Le jeton sert aux agents."];
     const err = (m) => { document.getElementById("err").textContent = m || ""; };
     const setStep = (n) => {
@@ -202,6 +204,8 @@
           password: pw.value
         });
         document.getElementById("secret").textContent = data.secret;
+        const enrolled = document.getElementById("user").value.trim();
+        if (enrolled) document.getElementById("ownerName").textContent = enrolled;
         const qr = document.getElementById("qr");
         if (typeof data.qr === "string" && data.qr.startsWith("data:image/png")) {
           qr.src = data.qr;

@@ -88,6 +88,12 @@ func TestWizardThenLogin(t *testing.T) {
 	if strings.Contains(html, "100.100.73.244:8795") || strings.Contains(html, "0.0.0.0") && strings.Contains(html, `value="0.0.0.0`) {
 		t.Fatal("install page hardcodes a bind")
 	}
+	if strings.Contains(html, `product-copy">pupitre`) || strings.Contains(html, ">Pupitre<") {
+		t.Fatal("install page still says pupitre")
+	}
+	if !strings.Contains(html, "Dashboard") || !strings.Contains(html, "brand-mark") {
+		t.Fatal("install page missing dashboard brand")
+	}
 
 	st := doJSON(t, h, http.MethodGet, "/install/status", nil, nil)
 	if st.Code != http.StatusOK {
@@ -180,6 +186,14 @@ func TestWizardThenLogin(t *testing.T) {
 	}
 	if confirmed["restart"] != nil {
 		t.Fatal("same listen should not ask restart")
+	}
+	after := doJSON(t, h, http.MethodGet, "/install/status", nil, nil)
+	var afterStatus map[string]any
+	if err := json.Unmarshal(after.Body.Bytes(), &afterStatus); err != nil {
+		t.Fatal(err)
+	}
+	if afterStatus["done"] != true || afterStatus["user"] != "herve" {
+		t.Fatalf("status after confirm=%v", afterStatus)
 	}
 
 	cookies := confirm.Result().Cookies()

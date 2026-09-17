@@ -28,21 +28,23 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="brand-product">
-        <div class="product-name">K-CRM</div>
-        <div class="product-copy">pupitre</div>
+        <div class="brand-mark" aria-hidden="true">K</div>
+        <div class="brand-text">
+          <div class="product-name">K-CRM</div>
+          <div class="product-copy">Dashboard</div>
+        </div>
       </div>
       <nav class="nav" aria-label="Navigation">
         <button class="nav-btn" type="button" aria-current="page">Accès</button>
       </nav>
       <div class="sidebar-foot">
-        <strong>Accès protégé</strong>
-        <span>Connexion requise</span>
+        <strong id="ownerName"></strong>
       </div>
     </aside>
     <main class="main">
       <header class="topbar">
         <div class="crumb">
-          <small>Pupitre</small>
+          <small>Dashboard</small>
           <strong>Connexion</strong>
         </div>
       </header>
@@ -78,6 +80,9 @@
     </main>
   </div>
   <script>
+    fetch("/install/status").then((r) => r.json()).then((d) => {
+      if (d.user) document.getElementById("ownerName").textContent = d.user;
+    }).catch(() => {});
     const pw = document.getElementById("password");
     const toggle = document.getElementById("pwToggle");
     toggle.addEventListener("click", () => {
@@ -115,7 +120,7 @@
         }
         location.href = "/";
       } catch (_) {
-        err.textContent = "Le pupitre ne répond pas. Réessaie.";
+        err.textContent = "K-CRM ne répond pas. Réessaie.";
         submit.disabled = false;
         submit.textContent = "Se connecter";
       }

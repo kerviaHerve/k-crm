@@ -78,10 +78,19 @@ button { touch-action: manipulation; cursor: pointer; }
     );
 }
 
-.brand-product { display: flex; align-items: center; gap: 12px; }
+.brand-product { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark {
+  flex: 0 0 36px;
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  background: var(--copper); color: var(--copper-ink);
+  font: 700 16px/1 var(--display);
+}
+.brand-text { min-width: 0; }
 .owner-avatar {
-  width: 40px; height: 40px; object-fit: cover;
+  width: 32px; height: 32px; object-fit: cover;
   border: 1px solid var(--line); background: var(--surface);
+  flex-shrink: 0;
 }
 a.chip { text-decoration: none; color: inherit; }
 .owner-avatar.lg { width: 72px; height: 72px; }
@@ -133,16 +142,16 @@ a.chip { text-decoration: none; color: inherit; }
 .key-row code { color: var(--mute); font-size: 12px; }
 .product-name {
   margin: 0;
-  font: 700 28px/0.9 var(--display);
-  letter-spacing: -0.04em;
-  text-transform: none;
+  font: 700 20px/1.1 var(--display);
+  letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 .product-copy {
-  margin-top: 8px;
+  margin-top: 2px;
   color: var(--mute);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .nav { display: grid; gap: 2px; margin-top: 36px; }
@@ -164,9 +173,17 @@ a.chip { text-decoration: none; color: inherit; }
 .sidebar-foot {
   margin-top: auto; padding-top: 16px;
   border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 10px;
   color: var(--mute); font-size: 12px;
+  min-height: 44px;
 }
-.sidebar-foot strong { display: block; color: var(--fg); font-family: var(--display); }
+.sidebar-foot strong {
+  display: block;
+  color: var(--fg);
+  font-family: var(--display);
+  font-size: 14px;
+  word-break: break-word;
+}
 
 .main { min-width: 0; }
 .topbar {

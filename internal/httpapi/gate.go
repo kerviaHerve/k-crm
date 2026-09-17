@@ -92,9 +92,13 @@ func (s *Server) installPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) installStatus(w http.ResponseWriter, _ *http.Request) {
 	out := map[string]any{"done": false, "listen": s.Listen}
 	if s.Setup != nil {
-		out["done"] = s.Setup.Done()
+		p := s.Setup.Public()
+		out["done"] = p.Done
 		if s.Listen == "" {
-			out["listen"] = s.Setup.Public().Listen
+			out["listen"] = p.Listen
+		}
+		if p.Done && p.User != "" {
+			out["user"] = p.User
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
