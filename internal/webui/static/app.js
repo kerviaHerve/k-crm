@@ -1,7 +1,4 @@
-const themeNames = { carbon: "Carbon", atelier: "Atelier", studio: "Studio", mineral: "Minérale", sand: "Sable" };
-const sizeNames = { s: "Compacte", l: "Standard", xl: "Confortable" };
 const titles = { dash: "Tableau de bord", today: "Aujourd'hui", chrono: "Chrono", prospects: "Prospects", clients: "Clients", lost: "Perdus", person: "Fiche", settings: "Réglages" };
-const POLES = ["Kervia", "Exonik", "EmoSana", "OP3", "perso"];
 
 let people = [];
 let weekLoad = [
@@ -12,9 +9,14 @@ let currentView = "dash";
 let selectedId = "";
 let dialogAction = null;
 let poleFilter = "all";
+let activities = [];
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function metaBits(p) {
+  return [p.org, p.pole].filter(Boolean).map(esc).join(" · ");
+}
 
 function isoShift(days) {
   const d = new Date();
@@ -33,19 +35,6 @@ function setTheme(value) {
   if (status) status.textContent = theme === "light" ? "Papier" : "Sombre";
   const live = $("interfaceAnnouncement");
   if (live) live.textContent = theme === "light" ? "Ambiance papier" : "Ambiance sombre";
-}
-
-function setSize(value, focusButton = false) {
-  const sizes = ["s", "l", "xl"];
-  if (!sizes.includes(value)) value = "l";
-  document.documentElement.dataset.kerviaSize = value;
-  try { localStorage.setItem("kervia-ui-size", value); } catch (_) {}
-  document.querySelectorAll("[data-size]").forEach((btn) => {
-    btn.setAttribute("aria-pressed", String(btn.dataset.size === value));
-  });
-  const status = $("sizeStatus");
-  if (status) status.textContent = `${sizeNames[value]} sélectionnée`;
-  if (focusButton) document.querySelector(`[data-size="${value}"]`)?.focus();
 }
 
 function toast(text) {
@@ -126,7 +115,7 @@ function relanceCard(p, withActions) {
       <div>
         <div class="who">
           <span class="avatar">${esc(p.initials)}</span>
-          <span><b>${esc(p.name)}</b><small>${esc(p.org)} · ${esc(p.pole)}</small></span>
+          <span><b>${esc(p.name)}</b><small>${metaBits(p)}</small></span>
         </div>
         <div class="meta">
           ${worldChip(p.world)}
@@ -145,7 +134,7 @@ function personRow(p) {
       <i class="mark ${markClass(p.when)}" aria-hidden="true"></i>
       <div class="who">
         <span class="avatar">${esc(p.initials)}</span>
-        <span><b>${esc(p.name)}</b><small>${esc(p.org)} · ${esc(p.pole)} · ${esc(p.leadState)}</small></span>
+        <span><b>${esc(p.name)}</b><small>${metaBits(p)}${p.leadState ? (metaBits(p) ? " · " : "") + esc(p.leadState) : ""}</small></span>
       </div>
       ${whenChip(p.when, p.whenLabel)}
     </button>`;
@@ -168,7 +157,7 @@ function detailHtml(p) {
     <p class="scene-name">${esc(p.org)}</p>
     <div class="meta">
       ${worldChip(p.world)}
-      <span class="chip">${esc(p.pole)}</span>
+      ${p.pole ? `<span class="chip">${esc(p.pole)}</span>` : ""}
       <span class="chip">Lead ${esc(p.leadState)}</span>
       ${p.phone ? `<a class="chip" href="${telHref(p.phone)}"><svg class="icon" aria-hidden="true"><use href="#Phone"/></svg>${esc(p.phone)}</a>` : ""}
       ${p.email ? `<a class="chip" href="mailto:${esc(p.email)}"><svg class="icon" aria-hidden="true"><use href="#Mail"/></svg>${esc(p.email)}</a>` : ""}
@@ -187,14 +176,19 @@ function byPole(list) {
 }
 
 function renderFilters() {
-  const html = `
-    <div class="filter-row" role="group" aria-label="Filtrer par pôle">
-      <span class="filter-label">Pôle</span>
+  document.querySelectorAll("[data-filter-bar]").forEach((el) => {
+    if (!activities.length) {
+      el.innerHTML = "";
+      return;
+    }
+    el.innerHTML = `
+    <div class="filter-row" role="group" aria-label="Filtrer par activité">
+      <span class="filter-label">Activité</span>
       <button class="chip-btn" type="button" data-pole="all" aria-pressed="${poleFilter === "all"}">Tous</button>
-      ${POLES.map((pole) => `<button class="chip-btn" type="button" data-pole="${pole}" aria-pressed="${poleFilter === pole}">${pole}</button>`).join("")}
+      ${activities.map((pole) => `<button class="chip-btn" type="button" data-pole="${esc(pole)}" aria-pressed="${poleFilter === pole}">${esc(pole)}</button>`).join("")}
     </div>
-    ${poleFilter === "all" ? "" : `<p class="filter-active">Filtre actif: ${poleFilter}. <button class="btn ghost" type="button" data-pole="all">Retirer</button></p>`}`;
-  document.querySelectorAll("[data-filter-bar]").forEach((el) => { el.innerHTML = html; });
+    ${poleFilter === "all" ? "" : `<p class="filter-active">Filtre actif: ${esc(poleFilter)}. <button class="btn ghost" type="button" data-pole="all">Retirer</button></p>`}`;
+  });
 }
 
 function renderDash() {
@@ -246,7 +240,7 @@ function renderToday() {
   $("todayList").innerHTML = groups.map(([label, list]) => {
     if (!list.length) return "";
     return `<div class="section-label">${label}</div>${list.map((p) => relanceCard(p, true)).join("")}`;
-  }).join("") || `<div class="empty">${poleFilter === "all" ? "File vide." : "Aucune relance dans ce pôle."}</div>`;
+  }).join("") || `<div class="empty">${poleFilter === "all" ? "File vide." : "Aucune relance dans cette activité."}</div>`;
   $("todayDetail").innerHTML = detailHtml(person(selectedId));
 }
 
@@ -266,7 +260,7 @@ function renderPerson(id) {
   if (!p) return;
   selectedId = id;
   $("personTitle").textContent = p.name;
-  $("personSub").textContent = `${p.world === "client" ? "Client" : "Prospect"} · ${p.pole}`;
+  $("personSub").textContent = `${p.world === "client" ? "Client" : "Prospect"}${p.pole ? " · " + p.pole : ""}`;
   $("personScene").innerHTML = detailHtml(p);
   $("personActions").innerHTML = `
     <h2>Gestes</h2>
@@ -473,7 +467,7 @@ async function renderPalette() {
   } else if (q) {
     people.filter((p) => `${p.name} ${p.org} ${p.pole}`.toLowerCase().includes(qn))
       .slice(0, 8)
-      .forEach((p) => hits.push({ label: p.name, sub: `${p.org} · ${p.pole}`, run: () => showView("person", p.id) }));
+      .forEach((p) => hits.push({ label: p.name, sub: [p.org, p.pole].filter(Boolean).join(" · "), run: () => showView("person", p.id) }));
   }
   const shown = hits.slice(0, 12);
   $("paletteList").innerHTML = shown.map((h, i) => `
@@ -484,6 +478,39 @@ async function renderPalette() {
 }
 
 let editId = null;
+
+function fillActivitySelect(selected) {
+  const el = $("cPole");
+  if (!el) return;
+  const list = activities.slice();
+  if (selected && !list.includes(selected)) list.push(selected);
+  el.innerHTML = [`<option value="">Aucune</option>`]
+    .concat(list.map((a) => `<option value="${esc(a)}"${a === selected ? " selected" : ""}>${esc(a)}</option>`))
+    .join("");
+}
+
+function renderActivitySettings() {
+  const el = $("activityList");
+  if (!el) return;
+  el.innerHTML = activities.length
+    ? activities.map((a, i) => `<li><span>${esc(a)}</span><button class="btn ghost" type="button" data-activity-del="${i}">Retirer</button></li>`).join("")
+    : `<li class="empty">Aucune. Ajoute les tiennes.</li>`;
+}
+
+async function saveActivities(next) {
+  const err = $("activityErr");
+  if (err) err.textContent = "";
+  try {
+    const data = await api("POST", "/ui/api/settings/activities", { activities: next });
+    activities = data.activities || [];
+    if (poleFilter !== "all" && !activities.includes(poleFilter)) poleFilter = "all";
+    fillActivitySelect();
+    renderActivitySettings();
+    showView(currentView);
+  } catch (e) {
+    if (err) err.textContent = e.message;
+  }
+}
 
 function openCreate() {
   editId = null;
@@ -498,6 +525,7 @@ function openCreate() {
   $("cWhen").closest(".field").hidden = false;
   $("cWhy").closest(".field").hidden = false;
   $("cWhen").value = isoShift(1);
+  fillActivitySelect("");
   $("cName").focus();
 }
 
@@ -511,7 +539,7 @@ function openEdit(id) {
   $("createForm").querySelector("h2").textContent = "Modifier la fiche";
   $("cName").value = p.name || "";
   $("cOrg").value = p.org || "";
-  $("cPole").value = p.pole || "Kervia";
+  fillActivitySelect(p.pole || "");
   $("cPhone").value = p.phone || "";
   $("cMail").value = p.email || "";
   $("cLead").value = p.lead || "";
@@ -565,15 +593,8 @@ document.querySelectorAll("[data-theme-option]").forEach((btn) => {
   btn.addEventListener("click", () => setTheme(btn.dataset.themeOption));
 });
 
-const trigger = $("preferencesTrigger");
-const preferences = $("preferences");
-if (trigger) {
-  trigger.addEventListener("click", () => showView("settings"));
-}
-
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    if (preferences && !preferences.hidden) { preferences.hidden = true; trigger?.setAttribute("aria-expanded", "false"); trigger?.focus(); }
     if (!$("create").hidden) closeCreate();
     if (!$("dialog").hidden) closeDialog();
     if (!$("palette").hidden) closePalette();
@@ -701,6 +722,9 @@ async function loadSettings() {
     if (fb) fb.textContent = (data.user || "?").slice(0, 1).toUpperCase();
     setAvatar(!!data.has_avatar);
     renderKeys(data.keys);
+    activities = data.activities || [];
+    fillActivitySelect();
+    renderActivitySettings();
     renderBackups(data.backups || []);
     renderMailAccounts(data.mail_accounts || []);
   } catch (err) {
@@ -830,13 +854,14 @@ $("totpStartForm")?.addEventListener("submit", async (event) => {
     });
     $("totpSecret").textContent = data.secret;
     const qr = $("totpQR");
-    if (qr) {
+    const wrap = $("totpQRWrap");
+    if (qr && wrap) {
       if (typeof data.qr === "string" && data.qr.startsWith("data:image/png")) {
         qr.src = data.qr;
-        qr.hidden = false;
+        wrap.hidden = false;
       } else {
         qr.removeAttribute("src");
-        qr.hidden = true;
+        wrap.hidden = true;
       }
     }
     $("totpConfirmForm").hidden = false;
@@ -854,7 +879,9 @@ $("totpConfirmForm")?.addEventListener("submit", async (event) => {
     $("totpConfirmForm").reset();
     $("totpConfirmForm").hidden = true;
     const qr = $("totpQR");
-    if (qr) { qr.removeAttribute("src"); qr.hidden = true; }
+    const wrap = $("totpQRWrap");
+    if (qr) qr.removeAttribute("src");
+    if (wrap) wrap.hidden = true;
     toast("Nouveau 2FA actif.");
   } catch (err) {
     $("totpErr").textContent = err.message;
@@ -1031,10 +1058,27 @@ $("ingestForm")?.addEventListener("submit", async (event) => {
 });
 
 setTheme(document.documentElement.dataset.theme);
-loadState().then(() => {
-  fetch("/ui/api/settings").then((r) => r.json()).then((d) => {
+$("activityForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = $("activityName").value.trim();
+  if (!name) return;
+  await saveActivities(activities.concat(name));
+  $("activityName").value = "";
+});
+$("activityList")?.addEventListener("click", async (event) => {
+  const btn = event.target.closest("[data-activity-del]");
+  if (!btn) return;
+  const i = Number(btn.dataset.activityDel);
+  await saveActivities(activities.filter((_, idx) => idx !== i));
+});
+loadState().then(async () => {
+  try {
+    const d = await api("GET", "/ui/api/settings");
+    activities = d.activities || [];
     setAvatar(!!d.has_avatar);
     setOwner(d.user);
-  }).catch(() => {});
+    fillActivitySelect();
+    renderActivitySettings();
+  } catch (_) {}
   showView("today");
 }).catch((err) => toast(err.message));

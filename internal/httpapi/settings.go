@@ -33,7 +33,7 @@ func (s *Server) bearerOK(got string) bool {
 }
 
 func (s *Server) settingsMe(w http.ResponseWriter, r *http.Request) {
-	out := map[string]any{"user": "", "totp": false, "has_avatar": false, "keys": []any{}, "listen": "", "domain": "", "https": false}
+	out := map[string]any{"user": "", "totp": false, "has_avatar": false, "keys": []any{}, "listen": "", "domain": "", "https": false, "activities": []string{}}
 	if s.Setup != nil {
 		p := s.Setup.Public()
 		out["user"] = p.User
@@ -41,6 +41,11 @@ func (s *Server) settingsMe(w http.ResponseWriter, r *http.Request) {
 		out["listen"] = p.Listen
 		out["domain"] = p.Domain
 		out["https"] = p.HTTPS
+		acts := p.Activities
+		if acts == nil {
+			acts = []string{}
+		}
+		out["activities"] = acts
 	}
 	if s.Keys != nil {
 		out["keys"] = s.Keys.List()
@@ -80,6 +85,29 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) settingsActivities(w http.ResponseWriter, r *http.Request) {
+	if s.Setup == nil {
+		writeErr(w, http.StatusUnauthorized, "wizard required")
+		return
+	}
+	var body struct {
+		Activities []string `json:"activities"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	if err := s.Setup.SetActivities(body.Activities); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	acts := s.Setup.Public().Activities
+	if acts == nil {
+		acts = []string{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"activities": acts})
 }
 
 func (s *Server) totpStart(w http.ResponseWriter, r *http.Request) {

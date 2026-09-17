@@ -83,6 +83,16 @@ func TestWizardCommitAndLogin(t *testing.T) {
 	if !f.Verify("herve", "newhorsebattery", code, now) {
 		t.Fatal("new password rejected")
 	}
+	if len(f.Public().Activities) != 0 {
+		t.Fatal("activities must start empty")
+	}
+	if err := f.SetActivities([]string{" Conseil ", "atelier", "conseil", ""}); err != nil {
+		t.Fatal(err)
+	}
+	got := f.Public().Activities
+	if len(got) != 2 || got[0] != "Conseil" || got[1] != "atelier" {
+		t.Fatalf("activities=%v", got)
+	}
 }
 
 func TestTOTPQR(t *testing.T) {

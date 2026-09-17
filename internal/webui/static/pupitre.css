@@ -539,16 +539,47 @@ a.chip { text-decoration: none; color: inherit; }
   width: 28px; height: 3px; background: var(--line);
 }
 .step-dots span[aria-current="true"] { background: var(--copper); }
+.totp-qr-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 4px;
+  padding: 10px 10px 8px;
+  background: #f4efe8;
+  border: 1px solid var(--line);
+  color: #100e0c;
+}
+.totp-qr-wrap figcaption {
+  margin: 0;
+  font-size: 12px;
+  color: #5c5348;
+}
 .totp-qr {
   display: block;
-  width: 180px;
-  height: 180px;
-  padding: 12px;
-  margin: 4px 0 0;
-  background: #fff;
-  border-radius: 2px;
-  image-rendering: pixelated;
+  width: 148px;
+  height: 148px;
+  background: #f4efe8;
 }
+.activity-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.activity-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+}
+.activity-list .empty { color: var(--mute); border: 0; }
+.activity-add {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+}
+.activity-add .field { flex: 1; margin: 0; }
 .secret-box {
   padding: 12px 0;
   border-top: 1px solid var(--line);

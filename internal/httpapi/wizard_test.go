@@ -205,6 +205,31 @@ func TestWizardThenLogin(t *testing.T) {
 	if state.Code != http.StatusOK {
 		t.Fatalf("state after session %d", state.Code)
 	}
+	me := doJSON(t, h, http.MethodGet, "/ui/api/settings", nil, cookies)
+	if me.Code != http.StatusOK {
+		t.Fatalf("settings %d %s", me.Code, me.Body.String())
+	}
+	var meBody map[string]any
+	if err := json.Unmarshal(me.Body.Bytes(), &meBody); err != nil {
+		t.Fatal(err)
+	}
+	acts, _ := meBody["activities"].([]any)
+	if len(acts) != 0 {
+		t.Fatalf("seeded activities=%v", acts)
+	}
+	saved := doJSON(t, h, http.MethodPost, "/ui/api/settings/activities", map[string]any{"activities": []string{"Conseil", "atelier"}}, cookies)
+	if saved.Code != http.StatusOK {
+		t.Fatalf("save activities %d %s", saved.Code, saved.Body.String())
+	}
+	home := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	h.ServeHTTP(home, req)
+	if strings.Contains(home.Body.String(), `value="Kervia"`) || strings.Contains(home.Body.String(), ">Pôle<") {
+		t.Fatal("app still ships seeded poles")
+	}
 	naked := doJSON(t, h, http.MethodGet, "/ui/api/state", nil, nil)
 	if naked.Code != http.StatusUnauthorized {
 		t.Fatalf("state without session %d", naked.Code)

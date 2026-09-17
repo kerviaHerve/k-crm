@@ -18,7 +18,7 @@ func All() []Tool {
 		},
 		{
 			Name:        "crm_creer_personne",
-			Description: "Cree un prospect. due (YYYY-MM-DD) et why sont obligatoires. Jamais un client.",
+			Description: "Cree un prospect. due (YYYY-MM-DD) et why sont obligatoires. Jamais un client. pole = activite libre, vide par defaut.",
 			HTTP:        []string{"POST /api/v1/prospects", "POST /api/v1/tools/crm_creer_personne"},
 			Required:    []string{"name", "due", "why"},
 			Properties:  map[string]any{"name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str, "due": str, "why": str, "channel": str},
@@ -74,14 +74,14 @@ func All() []Tool {
 		},
 		{
 			Name:        "crm_modifier",
-			Description: "Met a jour nom, org, pole, lead, phone, email. Ne change jamais le monde.",
+			Description: "Met a jour nom, org, activite (pole), lead, phone, email. Ne change jamais le monde.",
 			HTTP:        []string{"POST /api/v1/people/{id}", "POST /api/v1/tools/crm_modifier"},
 			Required:    []string{"id", "name"},
 			Properties:  map[string]any{"id": str, "name": str, "org": str, "pole": str, "lead": str, "phone": str, "email": str},
 		},
 		{
 			Name:        "crm_chercher",
-			Description: "Recherche puissante: nom, org, pole, lead, telephone, email, notes. Accents ignores. Jetons AND.",
+			Description: "Recherche puissante: nom, org, activite, lead, telephone, email, notes. Accents ignores. Jetons AND.",
 			HTTP:        []string{"GET /api/v1/people?q=", "POST /api/v1/tools/crm_chercher"},
 			Properties:  map[string]any{"q": str, "query": str},
 		},

@@ -99,6 +99,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/config", s.auth(s.publicConfig))
 	mux.HandleFunc("GET /ui/api/settings", s.settingsMe)
 	mux.HandleFunc("POST /ui/api/settings/password", s.changePassword)
+	mux.HandleFunc("POST /ui/api/settings/activities", s.settingsActivities)
 	mux.HandleFunc("POST /ui/api/settings/totp/start", s.totpStart)
 	mux.HandleFunc("POST /ui/api/settings/totp/confirm", s.totpConfirm)
 	mux.HandleFunc("GET /ui/api/avatar", s.avatarGet)

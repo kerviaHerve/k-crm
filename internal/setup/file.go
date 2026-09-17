@@ -21,7 +21,8 @@ type Config struct {
 	PasswordHash string `json:"password_hash"`
 	TOTPSecret   string `json:"totp_secret"`
 	Done         bool   `json:"done"`
-	TokenShown   bool   `json:"token_shown"`
+	TokenShown   bool     `json:"token_shown"`
+	Activities   []string `json:"activities"`
 }
 
 type File struct {
@@ -67,7 +68,7 @@ func (f *File) Done() bool {
 func (f *File) Public() Config {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return Config{Listen: f.cfg.Listen, Domain: f.cfg.Domain, HTTPS: f.cfg.HTTPS, User: f.cfg.User, Done: f.cfg.Done, TokenShown: f.cfg.TokenShown}
+	return Config{Listen: f.cfg.Listen, Domain: f.cfg.Domain, HTTPS: f.cfg.HTTPS, User: f.cfg.User, Done: f.cfg.Done, TokenShown: f.cfg.TokenShown, Activities: append([]string(nil), f.cfg.Activities...)}
 }
 
 func (f *File) User() string {
@@ -172,6 +173,41 @@ func (f *File) ReplaceTOTP(secret string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.cfg.TOTPSecret = secret
+	return f.saveLocked()
+}
+
+func NormalizeActivities(in []string) ([]string, error) {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(in))
+	for _, raw := range in {
+		name := strings.TrimSpace(raw)
+		if name == "" {
+			continue
+		}
+		if len([]rune(name)) > 40 {
+			return nil, fmt.Errorf("activite trop longue")
+		}
+		key := strings.ToLower(name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, name)
+	}
+	if len(out) > 24 {
+		return nil, fmt.Errorf("trop d'activites")
+	}
+	return out, nil
+}
+
+func (f *File) SetActivities(in []string) error {
+	out, err := NormalizeActivities(in)
+	if err != nil {
+		return err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cfg.Activities = out
 	return f.saveLocked()
 }
 

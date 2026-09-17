@@ -79,27 +79,8 @@
             <svg class="icon" aria-hidden="true"><use href="#Plus"/></svg>
             <span>Nouveau prospect</span>
           </button>
-          <button class="icon-button" id="preferencesTrigger" type="button" aria-label="Ouvrir les préférences d'interface" aria-controls="preferences" aria-expanded="false">
-            <svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg>
-          </button>
-          <section class="preferences" id="preferences" aria-labelledby="preferencesTitle" hidden>
-            <h2 id="preferencesTitle">Interface</h2>
-            <p>Sombre par défaut, papier en option. Pas les cinq thèmes Kervia.</p>
-            <div class="setting">
-              <div class="setting-head"><strong>Ambiance</strong><span id="themeStatus">Sombre</span></div>
-              <div class="swatches" role="group" aria-label="Ambiance">
-                <button class="chip-btn" type="button" data-theme-option="dark" aria-pressed="true">Sombre</button>
-                <button class="chip-btn" type="button" data-theme-option="light" aria-pressed="false">Papier</button>
-              </div>
-            </div>
-          </section>
         </div>
       </header>
-
-      <div class="banner" role="status">
-        <strong>Preview NetBird. Données de développement.</strong>
-        Peau cuivre. Pas Twenty. Pas le live kervia.ch.
-      </div>
 
       <div class="content" id="contenu">
         <section class="view" id="view-dash">
@@ -229,10 +210,10 @@
           <div class="settings-grid" id="settingsPaneCompte" role="tabpanel" aria-labelledby="tabCompte">
             <article class="panel">
               <h2>Profil</h2>
-              <p>Identifiant unique. L'avatar s'affiche dans la barre.</p>
+              <p>Identifiant unique. L'avatar s'affiche à côté de ton nom, en bas à gauche.</p>
               <div class="avatar-row">
                 <img class="owner-avatar lg" id="settingsAvatar" alt="" hidden>
-                <div class="avatar-fallback" id="settingsAvatarFallback">H</div>
+                <div class="avatar-fallback" id="settingsAvatarFallback">?</div>
                 <div>
                   <p class="setting-id" id="settingsUser">-</p>
                   <button class="btn" type="button" id="avatarPick">Choisir une photo</button>
@@ -240,6 +221,20 @@
                 </div>
               </div>
               <p class="form-error" id="avatarErr" aria-live="polite"></p>
+            </article>
+
+            <article class="panel">
+              <h2>Activités</h2>
+              <p>Tes lignes. Vide au départ. Ajoute seulement ce dont tu as besoin.</p>
+              <ul class="activity-list" id="activityList"></ul>
+              <form class="activity-add" id="activityForm">
+                <div class="field">
+                  <label for="activityName">Nouvelle activité</label>
+                  <input id="activityName" maxlength="40" placeholder="Conseil, atelier…">
+                </div>
+                <button class="btn primary" type="submit">Ajouter</button>
+              </form>
+              <p class="form-error" id="activityErr" aria-live="polite"></p>
             </article>
 
             <article class="panel">
@@ -272,8 +267,11 @@
                 <button class="btn" type="submit">Générer un nouveau secret</button>
               </form>
               <form class="gate-form" id="totpConfirmForm" hidden>
-                <img id="totpQR" class="totp-qr" alt="QR code 2FA" hidden>
-                <p class="gate-note" style="margin-top:8px">Scanne, ou tape le secret.</p>
+                <figure class="totp-qr-wrap" id="totpQRWrap" hidden>
+                  <img id="totpQR" class="totp-qr" alt="QR code 2FA">
+                  <figcaption>À scanner avec l'authenticator</figcaption>
+                </figure>
+                <p class="gate-note">Le secret reste là si tu dois le taper à la main.</p>
                 <p class="secret-box" id="totpSecret"></p>
                 <div class="field"><label for="totpNew">Nouveau code</label><input id="totpNew" inputmode="numeric" maxlength="6" required></div>
                 <button class="btn primary" type="submit">Activer ce 2FA</button>
@@ -285,7 +283,7 @@
               <h2>Clés agent</h2>
               <p>API et MCP. Le secret n'apparaît qu'une fois. Il en faut au moins une.</p>
               <form class="key-create" id="keyForm">
-                <div class="field"><label for="keyName">Nom</label><input id="keyName" required placeholder="rita, hermes, mac…"></div>
+                <div class="field"><label for="keyName">Nom</label><input id="keyName" required placeholder="agent-1"></div>
                 <button class="btn primary" type="submit">Créer une clé</button>
               </form>
               <p class="secret-box" id="keyOnce" hidden></p>
@@ -307,8 +305,8 @@
               <p>Un seul. SMTP. Sert à envoyer. Mot de passe jamais réaffiché. Tester authentifie sans envoyer de message.</p>
               <form class="mail-form" id="smtpForm">
                 <input id="smtpId" type="hidden">
-                <div class="field"><label for="smtpName">Nom</label><input id="smtpName" required placeholder="Net6 envoi"></div>
-                <div class="field"><label for="smtpHost">Hôte</label><input id="smtpHost" required placeholder="smtp.net6.ch" autocomplete="off"></div>
+                <div class="field"><label for="smtpName">Nom</label><input id="smtpName" required placeholder="Envoi"></div>
+                <div class="field"><label for="smtpHost">Hôte</label><input id="smtpHost" required placeholder="smtp.domaine" autocomplete="off"></div>
                 <div class="field"><label for="smtpPort">Port</label><input id="smtpPort" inputmode="numeric" placeholder="587"></div>
                 <div class="field"><label for="smtpSec">Sécurité</label>
                   <select id="smtpSec">
@@ -319,7 +317,7 @@
                 </div>
                 <div class="field"><label for="smtpUser">Identifiant</label><input id="smtpUser" required autocomplete="off"></div>
                 <div class="field"><label for="smtpPass">Mot de passe</label><input id="smtpPass" type="password" autocomplete="new-password" placeholder="inchangé si vide"></div>
-                <div class="field"><label for="smtpFrom">Adresse d'envoi</label><input id="smtpFrom" required placeholder="herve@net6.ch"></div>
+                <div class="field"><label for="smtpFrom">Adresse d'envoi</label><input id="smtpFrom" required placeholder="contact@domaine"></div>
                 <div class="mail-actions">
                   <button class="btn primary" type="submit">Enregistrer</button>
                   <button class="btn" type="button" id="smtpTest">Tester</button>
@@ -333,8 +331,8 @@
               <h2>Boîtes à collecter</h2>
               <p>Autant que tu veux. IMAP. Préfère un dossier dédié plutôt que toute la boîte. Tester ouvre une session et se déconnecte, sans lire le courrier. Pas de relève automatique.</p>
               <form class="mail-form" id="imapForm">
-                <div class="field"><label for="imapName">Nom</label><input id="imapName" required placeholder="CRM net6"></div>
-                <div class="field"><label for="imapHost">Hôte</label><input id="imapHost" required placeholder="imap.net6.ch" autocomplete="off"></div>
+                <div class="field"><label for="imapName">Nom</label><input id="imapName" required placeholder="Collecte"></div>
+                <div class="field"><label for="imapHost">Hôte</label><input id="imapHost" required placeholder="imap.domaine" autocomplete="off"></div>
                 <div class="field"><label for="imapPort">Port</label><input id="imapPort" inputmode="numeric" placeholder="993"></div>
                 <div class="field"><label for="imapSec">Sécurité</label>
                   <select id="imapSec">
@@ -410,13 +408,9 @@
       <div class="form-grid">
         <div class="field"><label for="cName">Nom</label><input id="cName" name="name" required autocomplete="name"></div>
         <div class="field"><label for="cOrg">Organisation</label><input id="cOrg" name="org"></div>
-        <div class="field"><label for="cPole">Pôle</label>
-          <select id="cPole" name="pole" required>
-            <option value="Kervia">Kervia</option>
-            <option value="Exonik">Exonik</option>
-            <option value="EmoSana">EmoSana</option>
-            <option value="OP3">OP3</option>
-            <option value="perso">perso</option>
+        <div class="field"><label for="cPole">Activité</label>
+          <select id="cPole" name="pole">
+            <option value="">Aucune</option>
           </select>
         </div>
         <div class="field"><label for="cPhone">Téléphone</label><input id="cPhone" name="phone" type="tel"></div>

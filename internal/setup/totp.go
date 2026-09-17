@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"image/color"
 	"net/url"
 	"strconv"
 	"strings"
@@ -68,7 +69,13 @@ func OTPAuthURL(user, secret string) string {
 
 func TOTPQR(user, secret string) (otpauth, qr string, err error) {
 	otpauth = OTPAuthURL(user, secret)
-	png, err := qrcode.Encode(otpauth, qrcode.Medium, 256)
+	q, err := qrcode.New(otpauth, qrcode.Medium)
+	if err != nil {
+		return otpauth, "", err
+	}
+	q.ForegroundColor = color.NRGBA{R: 0x10, G: 0x0e, B: 0x0c, A: 0xff}
+	q.BackgroundColor = color.NRGBA{R: 0xf4, G: 0xef, B: 0xe8, A: 0xff}
+	png, err := q.PNG(256)
 	if err != nil {
 		return otpauth, "", err
 	}
