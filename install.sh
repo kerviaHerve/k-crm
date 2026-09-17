@@ -595,9 +595,9 @@ if [[ "$USE_TUI" -eq 0 ]]; then
   say "2/5  Construction"
 fi
 export CGO_ENABLED=0
-tui_note "go build -o k-crm ./cmd/k-crm"
+tui_note "go build -buildvcs=true -o k-crm ./cmd/k-crm"
 printf '%s' "$C_SHOW"
-"$GO_BIN" build -o "$BIN" ./cmd/k-crm
+"$GO_BIN" build -buildvcs=true -o "$BIN" ./cmd/k-crm
 printf '%s' "$C_HIDE"
 chmod 755 "$BIN"
 tui_ok "$BIN"

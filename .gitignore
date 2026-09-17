@@ -29,5 +29,7 @@ __pycache__/
 *.sqlite
 data/
 /k-crm
+/k-crm.new
+/k-crm.prev
 tmp/
 .cache/

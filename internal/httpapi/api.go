@@ -12,6 +12,8 @@ import (
 	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
+	"brain.op3.ch/sun221/k-crm/internal/update"
+	"brain.op3.ch/sun221/k-crm/internal/version"
 	"brain.op3.ch/sun221/k-crm/internal/webui"
 )
 
@@ -25,6 +27,7 @@ type Server struct {
 	Sessions    *sessions.Store
 	DataDir     string
 	Listen      string
+	Update      *update.Env
 	pending     *setup.Pending
 	pendingTOTP string
 }
@@ -152,6 +155,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /ui/api/backups", s.backupsCreate)
 	mux.HandleFunc("GET /ui/api/backups/{name}", s.backupsGet)
 	mux.HandleFunc("POST /ui/api/backups/{name}/restore", s.backupsRestore)
+	mux.HandleFunc("GET /ui/api/update", s.updateGet)
+	mux.HandleFunc("POST /ui/api/update/check", s.updateCheck)
+	mux.HandleFunc("POST /ui/api/update", s.updateApply)
 	webui.Mount(mux, s.Store, s.now)
 	return s.gate(mux)
 }
@@ -178,7 +184,12 @@ func writeErr(w http.ResponseWriter, code int, msg string) {
 }
 
 func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "service": "k-crm"})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":       true,
+		"service":  "k-crm",
+		"version":  version.Number,
+		"revision": version.ShortRev(),
+	})
 }
 
 func (s *Server) tools(w http.ResponseWriter, _ *http.Request) {

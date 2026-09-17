@@ -45,6 +45,7 @@
       <symbol id="KeyRound" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 1 2 16V8a2 2 0 0 1 .586-1.414l.828-.828A2 2 0 0 1 4.828 5h10.344a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 1 18 8v8a2 2 0 0 1-.586 1.414l-.828.828A2 2 0 0 1 15.172 19H4.828a2 2 0 0 1-1.414-.586z"/><circle cx="8.5" cy="12" r="2"/></symbol>
       <symbol id="Shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
       <symbol id="Database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol>
+      <symbol id="RefreshCw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
       <symbol id="LogOut" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
       <symbol id="UserX" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></symbol>
       <symbol id="Inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
@@ -81,7 +82,7 @@
           <button class="nav-btn" type="button" data-nav="clients" title="Clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg><span class="nav-label">Clients</span><span class="count" data-count="clients">0</span></button>
           <button class="nav-btn" type="button" data-nav="lost" title="Perdus"><svg class="icon" aria-hidden="true"><use href="#UserX"/></svg><span class="nav-label">Perdus</span><span class="count" data-count="lost">0</span></button>
         </details>
-        <button class="nav-btn" type="button" data-nav="settings" title="Réglages"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg><span class="nav-label">Réglages</span></button>
+        <button class="nav-btn" type="button" data-nav="settings" title="Réglages"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg><span class="nav-label">Réglages</span><span class="update-dot" hidden data-update-dot></span></button>
       </nav>
       <div class="sidebar-foot">
         <img class="owner-avatar" id="ownerAvatar" alt="" hidden>
@@ -330,6 +331,18 @@
               <div class="stack" id="backupList"></div>
               <p class="form-error" id="backupErr" aria-live="polite"></p>
             </details>
+
+            <details class="fold settings-wide" id="updateFold">
+              <summary><svg class="icon" aria-hidden="true"><use href="#RefreshCw"/></svg>Mise à jour<span class="update-dot" hidden data-update-dot></span></summary>
+              <p>Le binaire se reconstruit depuis GitHub main. Tes données restent dans data/. Une copie SQLite est faite avant.</p>
+              <p id="updateVersion">Version</p>
+              <p id="updateStatus">Vérification…</p>
+              <div class="actions">
+                <button class="btn" type="button" id="updateCheck">Vérifier</button>
+                <button class="btn primary" type="button" id="updateApply" hidden>Mettre à jour</button>
+              </div>
+              <p class="form-error" id="updateErr" aria-live="polite"></p>
+            </details>
           </div>
           <div class="settings-grid" id="settingsPaneEmail" role="tabpanel" aria-labelledby="tabEmail" hidden>
             <details class="fold settings-wide" open>
@@ -408,7 +421,7 @@
     <button class="nav-btn" type="button" data-nav="prospects" title="Prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg><span class="nav-label">Prospects</span></button>
     <button class="nav-btn" type="button" data-nav="clients" title="Clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg><span class="nav-label">Clients</span></button>
     <button class="nav-btn" type="button" data-nav="lost" title="Perdus"><svg class="icon" aria-hidden="true"><use href="#UserX"/></svg><span class="nav-label">Perdus</span></button>
-    <button class="nav-btn" type="button" data-nav="settings" title="Réglages"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg><span class="nav-label">Réglages</span></button>
+    <button class="nav-btn" type="button" data-nav="settings" title="Réglages"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg><span class="nav-label">Réglages</span><span class="update-dot" hidden data-update-dot></span></button>
   </nav>
 
   <div class="overlay" id="dialog" hidden>

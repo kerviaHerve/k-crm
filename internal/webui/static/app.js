@@ -936,6 +936,8 @@ async function loadSettings() {
     renderActivitySettings();
     renderBackups(data.backups || []);
     renderMailAccounts(data.mail_accounts || []);
+    if ($("updateStatus")) $("updateStatus").textContent = "Vérification…";
+    await checkUpdate(true);
   } catch (err) {
     toast(err.message);
   }
@@ -1014,6 +1016,46 @@ function renderBackups(list) {
         <button class="btn ghost" type="button" data-restore="${esc(b.name)}">Restaurer</button>
       </div>
     </div>`).join("") || `<p class="empty">Aucune copie.</p>`;
+}
+
+function setUpdateBadge(on) {
+  document.querySelectorAll("[data-update-dot]").forEach((el) => {
+    el.hidden = !on;
+  });
+  document.querySelectorAll("[data-nav=settings]").forEach((btn) => {
+    btn.title = on ? "Réglages, mise à jour disponible" : "Réglages";
+  });
+}
+
+function renderUpdate(st) {
+  if (!st) return;
+  const ver = $("updateVersion");
+  if (ver) {
+    const rev = st.revision ? ` (${st.revision})` : "";
+    ver.textContent = "Version " + (st.version || "") + rev;
+  }
+  const msg = $("updateStatus");
+  if (msg) msg.textContent = st.message || "";
+  const apply = $("updateApply");
+  if (apply) {
+    apply.hidden = !st.can_apply;
+    apply.disabled = !st.can_apply;
+  }
+  setUpdateBadge(!!st.available);
+}
+
+async function checkUpdate(fetchRemote) {
+  const box = $("updateErr");
+  if (box) box.textContent = "";
+  try {
+    const st = fetchRemote
+      ? await api("POST", "/ui/api/update/check")
+      : await api("GET", "/ui/api/update");
+    renderUpdate(st);
+    return st;
+  } catch (err) {
+    if (box) box.textContent = err.message;
+  }
 }
 
 $("logoutBtn")?.addEventListener("click", async () => {
@@ -1145,6 +1187,24 @@ $("backupList")?.addEventListener("click", async (event) => {
     toast(out.restart ? "Restauration posée. Relance en cours." : "Restauration posée. Relance k-crm pour l'appliquer.");
   } catch (err) {
     $("backupErr").textContent = err.message;
+  }
+});
+$("updateCheck")?.addEventListener("click", async () => {
+  if ($("updateStatus")) $("updateStatus").textContent = "Vérification…";
+  await checkUpdate(true);
+});
+$("updateApply")?.addEventListener("click", async () => {
+  if (!confirm("Télécharger GitHub main, reconstruire le binaire, et relancer ? Une copie SQLite est faite avant.")) return;
+  $("updateErr").textContent = "";
+  $("updateApply").disabled = true;
+  if ($("updateStatus")) $("updateStatus").textContent = "Mise à jour en cours…";
+  try {
+    const out = await api("POST", "/ui/api/update");
+    toast(out.restart ? "Binaire posé. Relance en cours." : "Binaire posé. Relance k-crm pour l'appliquer.");
+    if (out.restart) setTimeout(() => location.reload(), 2500);
+  } catch (err) {
+    $("updateErr").textContent = err.message;
+    $("updateApply").disabled = false;
   }
 });
 document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
@@ -1290,6 +1350,7 @@ loadState().then(async () => {
     renderActivitySettings();
   } catch (_) {}
   showView("today");
+  checkUpdate(true);
 }).catch((err) => toast(err.message));
 
 function groupKey(el) {

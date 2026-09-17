@@ -16,6 +16,7 @@ import (
 
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
+	"brain.op3.ch/sun221/k-crm/internal/version"
 )
 
 func (s *Server) bearerOK(got string) bool {
@@ -65,6 +66,8 @@ func (s *Server) settingsMe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	out["systemd"] = os.Getenv("KCRM_SYSTEMD") == "1"
+	out["version"] = version.Number
+	out["revision"] = version.ShortRev()
 	writeJSON(w, http.StatusOK, out)
 }
 

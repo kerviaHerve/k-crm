@@ -124,6 +124,21 @@ button { touch-action: manipulation; }
   text-align: center;
 }
 
+.update-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: var(--k-radius-full);
+  background: var(--k-primary);
+}
+
+.fold summary .update-dot {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .sidebar-foot {
   margin-top: auto;
   padding-top: var(--k-space-lg-current);
