@@ -41,17 +41,18 @@ Le meme verbe existe a la souris et en API.
 
 ## Lancer
 
-```bash
-export PATH="/home/op3/.local/share/go1.26.5/bin:$PATH"
-go run ./cmd/k-crm serve -listen 127.0.0.1:8740 -data ./data
-```
-
-Le jeton n'est pas affiche. Il est dans `./data/token`.
+Depuis le depot clone:
 
 ```bash
-tok=$(tr -d ' \n' < ./data/token)
-curl -fsS -H "Authorization: Bearer $tok" http://127.0.0.1:8740/api/v1/aujourd-hui
+chmod +x install.sh
+./install.sh
 ```
+
+Le script detecte Go (ou le telecharge sans snap ni root), construit le binaire,
+demande IP:port et le dossier data, puis lance le wizard dans le navigateur.
+Jamais `0.0.0.0`. L'install produit reste le wizard, pas ce script.
+
+Le jeton n'est pas affiche. Il est dans `data/token` (mode 0600).
 
 ## Tests
 
