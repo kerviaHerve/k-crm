@@ -129,6 +129,7 @@ func TestMCPListsEveryVerb(t *testing.T) {
 		"crm_aujourd_hui", "crm_creer_personne", "crm_fiche", "crm_noter", "crm_valider_lead",
 		"crm_marquer_perdu", "crm_relancer", "crm_reporter", "crm_attendre", "crm_modifier",
 		"crm_chercher", "crm_perdus", "crm_ingerer", "crm_cles_lister", "crm_cles_creer", "crm_cles_revoquer",
+		"crm_comptes_mail_lister", "crm_comptes_mail_ajouter", "crm_comptes_mail_modifier", "crm_comptes_mail_supprimer", "crm_comptes_mail_tester",
 		"crm_importer", "crm_exporter", "crm_etat",
 	} {
 		if !strings.Contains(body, name) {

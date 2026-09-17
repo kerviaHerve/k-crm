@@ -8,6 +8,7 @@ import (
 
 	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/catalog"
+	"brain.op3.ch/sun221/k-crm/internal/mailacct"
 	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
@@ -20,6 +21,7 @@ type Server struct {
 	Now         func() time.Time
 	Setup       *setup.File
 	Keys        *agentkeys.Store
+	Mail        *mailacct.Store
 	Sessions    *sessions.Store
 	DataDir     string
 	pending     *setup.Pending
@@ -113,6 +115,21 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /ui/api/ingest", s.ingest)
 	mux.HandleFunc("POST /api/v1/ingest", s.auth(s.ingest))
 	mux.HandleFunc("POST /api/v1/tools/crm_ingerer", s.auth(s.ingest))
+	mux.HandleFunc("GET /ui/api/mail-accounts", s.mailAccounts)
+	mux.HandleFunc("POST /ui/api/mail-accounts", s.mailCreate)
+	mux.HandleFunc("POST /ui/api/mail-accounts/{id}", s.mailUpdate)
+	mux.HandleFunc("DELETE /ui/api/mail-accounts/{id}", s.mailDelete)
+	mux.HandleFunc("POST /ui/api/mail-accounts/{id}/test", s.mailTest)
+	mux.HandleFunc("GET /api/v1/mail-accounts", s.auth(s.mailAccounts))
+	mux.HandleFunc("POST /api/v1/mail-accounts", s.auth(s.mailCreate))
+	mux.HandleFunc("POST /api/v1/mail-accounts/{id}", s.auth(s.mailUpdate))
+	mux.HandleFunc("DELETE /api/v1/mail-accounts/{id}", s.auth(s.mailDelete))
+	mux.HandleFunc("POST /api/v1/mail-accounts/{id}/test", s.auth(s.mailTest))
+	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_lister", s.auth(s.mailAccounts))
+	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_ajouter", s.auth(s.mailCreate))
+	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_modifier", s.auth(s.mailUpdate))
+	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_supprimer", s.auth(s.mailDelete))
+	mux.HandleFunc("POST /api/v1/tools/crm_comptes_mail_tester", s.auth(s.mailTest))
 	mux.HandleFunc("GET /ui/api/backups", s.backupsList)
 	mux.HandleFunc("POST /ui/api/backups", s.backupsCreate)
 	mux.HandleFunc("GET /ui/api/backups/{name}", s.backupsGet)

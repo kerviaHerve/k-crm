@@ -12,12 +12,14 @@ import (
 
 	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/catalog"
+	"brain.op3.ch/sun221/k-crm/internal/mailacct"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
 
 type Server struct {
 	Store  *store.Store
 	Keys   *agentkeys.Store
+	Mail   *mailacct.Store
 	Now    func() time.Time
 	ndjson bool
 }
@@ -352,6 +354,70 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			return nil, err
 		}
 		return textResult(out)
+	case "crm_comptes_mail_lister":
+		if s.Mail == nil {
+			return textResult([]any{})
+		}
+		return textResult(s.Mail.List())
+	case "crm_comptes_mail_ajouter":
+		if s.Mail == nil {
+			return nil, fmt.Errorf("mail")
+		}
+		var in mailacct.Input
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &in); err != nil {
+				return nil, err
+			}
+		}
+		a, err := s.Mail.Create(in)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(a)
+	case "crm_comptes_mail_modifier":
+		if s.Mail == nil {
+			return nil, fmt.Errorf("mail")
+		}
+		var in mailacct.Input
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &in); err != nil {
+				return nil, err
+			}
+		}
+		a, err := s.Mail.Update(in.ID, in)
+		if err != nil {
+			return nil, err
+		}
+		return textResult(a)
+	case "crm_comptes_mail_supprimer":
+		if s.Mail == nil {
+			return nil, fmt.Errorf("mail")
+		}
+		var in mailacct.Input
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &in); err != nil {
+				return nil, err
+			}
+		}
+		if err := s.Mail.Delete(in.ID); err != nil {
+			return nil, err
+		}
+		return textResult(map[string]any{"ok": true})
+	case "crm_comptes_mail_tester":
+		if s.Mail == nil {
+			return nil, fmt.Errorf("mail")
+		}
+		var in mailacct.Input
+		if len(p.Arguments) > 0 {
+			if err := json.Unmarshal(p.Arguments, &in); err != nil {
+				return nil, err
+			}
+		}
+		a, err := s.Mail.Test(in.ID)
+		if err != nil {
+			return textResult(map[string]any{"ok": false, "account": a, "error": err.Error()})
+		}
+		return textResult(map[string]any{"ok": true, "account": a})
 	default:
 		return nil, fmt.Errorf("unknown tool")
 	}

@@ -97,6 +97,33 @@ a.chip { text-decoration: none; color: inherit; }
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 .settings-wide { grid-column: 1 / -1; }
+.settings-tabs { display: flex; gap: 8px; margin: 0 0 16px; }
+.settings-tab {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mute);
+}
+.settings-tab[aria-selected="true"] {
+  background: var(--copper);
+  color: var(--copper-ink);
+  border-color: var(--copper);
+}
+.mail-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.mail-form .mail-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.mail-form select {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0 12px;
+}
 .key-create { display: flex; gap: 8px; align-items: end; }
 .key-create .field { flex: 1; margin: 0; }
 .key-row {

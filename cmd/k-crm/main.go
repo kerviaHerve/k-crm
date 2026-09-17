@@ -14,6 +14,7 @@ import (
 
 	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/httpapi"
+	"brain.op3.ch/sun221/k-crm/internal/mailacct"
 	"brain.op3.ch/sun221/k-crm/internal/mcp"
 	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
@@ -58,7 +59,11 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		return (&mcp.Server{Store: st, Keys: keys}).Serve(os.Stdin, os.Stdout)
+		mail, err := mailacct.Open(*dataDir)
+		if err != nil {
+			return err
+		}
+		return (&mcp.Server{Store: st, Keys: keys, Mail: mail}).Serve(os.Stdin, os.Stdout)
 	case "backup":
 		info, err := st.Backup()
 		if err != nil {
@@ -95,7 +100,11 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, Sessions: sess, DataDir: *dataDir}
+		mail, err := mailacct.Open(*dataDir)
+		if err != nil {
+			return err
+		}
+		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, Mail: mail, Sessions: sess, DataDir: *dataDir}
 		ln, err := net.Listen("tcp", *listen)
 		if err != nil {
 			return err

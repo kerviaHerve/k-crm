@@ -45,6 +45,11 @@ func (s *Server) settingsMe(w http.ResponseWriter, r *http.Request) {
 	if s.Keys != nil {
 		out["keys"] = s.Keys.List()
 	}
+	if s.Mail != nil {
+		out["mail_accounts"] = s.Mail.List()
+	} else {
+		out["mail_accounts"] = []any{}
+	}
 	if s.DataDir != "" {
 		_, err := os.Stat(filepath.Join(s.DataDir, "avatar"))
 		out["has_avatar"] = err == nil

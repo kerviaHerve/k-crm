@@ -218,19 +218,23 @@
           <div class="view-head">
             <div>
               <h1>Réglages</h1>
-              <p>Toi, le 2FA, les clés agent. Rien d’une équipe.</p>
+              <p>Toi, le 2FA, les clés agent, le mail. Rien d'une équipe.</p>
             </div>
             <button class="btn ghost" type="button" id="logoutBtn">Se déconnecter</button>
           </div>
-          <div class="settings-grid">
+          <div class="settings-tabs" role="tablist" aria-label="Réglages">
+            <button class="settings-tab" type="button" data-settings-tab="compte" role="tab" aria-selected="true" id="tabCompte">Compte</button>
+            <button class="settings-tab" type="button" data-settings-tab="email" role="tab" aria-selected="false" id="tabEmail">Email</button>
+          </div>
+          <div class="settings-grid" id="settingsPaneCompte" role="tabpanel" aria-labelledby="tabCompte">
             <article class="panel">
               <h2>Profil</h2>
-              <p>Identifiant unique. L’avatar s’affiche dans la barre.</p>
+              <p>Identifiant unique. L'avatar s'affiche dans la barre.</p>
               <div class="avatar-row">
                 <img class="owner-avatar lg" id="settingsAvatar" alt="" hidden>
                 <div class="avatar-fallback" id="settingsAvatarFallback">H</div>
                 <div>
-                  <p class="setting-id" id="settingsUser">—</p>
+                  <p class="setting-id" id="settingsUser">-</p>
                   <button class="btn" type="button" id="avatarPick">Choisir une photo</button>
                   <input id="avatarFile" type="file" accept="image/jpeg,image/png" hidden>
                 </div>
@@ -261,7 +265,7 @@
 
             <article class="panel">
               <h2>2FA</h2>
-              <p>Obligatoire. Un nouvel authenticator remplace l’ancien après confirmation.</p>
+              <p>Obligatoire. Un nouvel authenticator remplace l'ancien après confirmation.</p>
               <form class="gate-form" id="totpStartForm">
                 <div class="field"><label for="totpPass">Mot de passe</label><input id="totpPass" type="password" required></div>
                 <div class="field"><label for="totpOld">Code actuel</label><input id="totpOld" inputmode="numeric" maxlength="6" required></div>
@@ -277,7 +281,7 @@
 
             <article class="panel settings-wide">
               <h2>Clés agent</h2>
-              <p>API et MCP. Le secret n’apparaît qu’une fois. Il en faut au moins une.</p>
+              <p>API et MCP. Le secret n'apparaît qu'une fois. Il en faut au moins une.</p>
               <form class="key-create" id="keyForm">
                 <div class="field"><label for="keyName">Nom</label><input id="keyName" required placeholder="rita, hermes, mac…"></div>
                 <button class="btn primary" type="submit">Créer une clé</button>
@@ -294,10 +298,63 @@
               <div class="stack" id="backupList"></div>
               <p class="form-error" id="backupErr" aria-live="polite"></p>
             </article>
+          </div>
+          <div class="settings-grid" id="settingsPaneEmail" role="tabpanel" aria-labelledby="tabEmail" hidden>
+            <article class="panel settings-wide">
+              <h2>Compte d'envoi</h2>
+              <p>Un seul. SMTP. Sert à envoyer. Mot de passe jamais réaffiché. Tester authentifie sans envoyer de message.</p>
+              <form class="mail-form" id="smtpForm">
+                <input id="smtpId" type="hidden">
+                <div class="field"><label for="smtpName">Nom</label><input id="smtpName" required placeholder="Net6 envoi"></div>
+                <div class="field"><label for="smtpHost">Hôte</label><input id="smtpHost" required placeholder="smtp.net6.ch" autocomplete="off"></div>
+                <div class="field"><label for="smtpPort">Port</label><input id="smtpPort" inputmode="numeric" placeholder="587"></div>
+                <div class="field"><label for="smtpSec">Sécurité</label>
+                  <select id="smtpSec">
+                    <option value="starttls" selected>STARTTLS</option>
+                    <option value="tls">TLS</option>
+                    <option value="none">Aucune</option>
+                  </select>
+                </div>
+                <div class="field"><label for="smtpUser">Identifiant</label><input id="smtpUser" required autocomplete="off"></div>
+                <div class="field"><label for="smtpPass">Mot de passe</label><input id="smtpPass" type="password" autocomplete="new-password" placeholder="inchangé si vide"></div>
+                <div class="field"><label for="smtpFrom">Adresse d'envoi</label><input id="smtpFrom" required placeholder="herve@net6.ch"></div>
+                <div class="mail-actions">
+                  <button class="btn primary" type="submit">Enregistrer</button>
+                  <button class="btn" type="button" id="smtpTest">Tester</button>
+                </div>
+              </form>
+              <p class="secret-box" id="smtpOut" hidden></p>
+              <p class="form-error" id="smtpErr" aria-live="polite"></p>
+            </article>
 
             <article class="panel settings-wide">
-              <h2>Collecteur mail</h2>
-              <p>Parseur RFC822. Une note seulement si l'expéditeur (ou un destinataire) est déjà au carnet. Listes, bounces, noreply, réponses auto et messages vides : refusés. Jamais de nouvelle fiche.</p>
+              <h2>Boîtes à collecter</h2>
+              <p>Autant que tu veux. IMAP. Préfère un dossier dédié plutôt que toute la boîte. Tester ouvre une session et se déconnecte, sans lire le courrier. Pas de relève automatique.</p>
+              <form class="mail-form" id="imapForm">
+                <div class="field"><label for="imapName">Nom</label><input id="imapName" required placeholder="CRM net6"></div>
+                <div class="field"><label for="imapHost">Hôte</label><input id="imapHost" required placeholder="imap.net6.ch" autocomplete="off"></div>
+                <div class="field"><label for="imapPort">Port</label><input id="imapPort" inputmode="numeric" placeholder="993"></div>
+                <div class="field"><label for="imapSec">Sécurité</label>
+                  <select id="imapSec">
+                    <option value="tls" selected>TLS</option>
+                    <option value="starttls">STARTTLS</option>
+                    <option value="none">Aucune</option>
+                  </select>
+                </div>
+                <div class="field"><label for="imapUser">Identifiant</label><input id="imapUser" required autocomplete="off"></div>
+                <div class="field"><label for="imapPass">Mot de passe</label><input id="imapPass" type="password" required autocomplete="new-password"></div>
+                <div class="field"><label for="imapFolder">Dossier</label><input id="imapFolder" placeholder="INBOX" value="INBOX"></div>
+                <div class="mail-actions">
+                  <button class="btn primary" type="submit">Ajouter</button>
+                </div>
+              </form>
+              <div class="stack" id="imapList"></div>
+              <p class="form-error" id="imapErr" aria-live="polite"></p>
+            </article>
+
+            <article class="panel settings-wide">
+              <h2>Parseur</h2>
+              <p>RFC822 à la main. Une note seulement si l'expéditeur (ou un destinataire) est déjà au carnet. Listes, bounces, noreply, réponses auto et messages vides : refusés. Jamais de nouvelle fiche.</p>
               <form id="ingestForm">
                 <div class="field"><label for="ingestFile">Fichier .eml</label><input id="ingestFile" type="file" accept=".eml,message/rfc822,text/plain"></div>
                 <div class="field"><label for="ingestRaw">Ou message brut</label><textarea id="ingestRaw" rows="8" placeholder="From: …"></textarea></div>

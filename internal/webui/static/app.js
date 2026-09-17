@@ -696,9 +696,69 @@ async function loadSettings() {
     setAvatar(!!data.has_avatar);
     renderKeys(data.keys);
     renderBackups(data.backups || []);
+    renderMailAccounts(data.mail_accounts || []);
   } catch (err) {
     toast(err.message);
   }
+}
+
+function showSettingsTab(name) {
+  const email = name === "email";
+  const paneCompte = $("settingsPaneCompte");
+  const paneEmail = $("settingsPaneEmail");
+  if (paneCompte) paneCompte.hidden = email;
+  if (paneEmail) paneEmail.hidden = !email;
+  document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
+    btn.setAttribute("aria-selected", String(btn.dataset.settingsTab === (email ? "email" : "compte")));
+  });
+}
+
+function mailPort(v) {
+  const n = parseInt(String(v || "").trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function fillSmtp(acc) {
+  if (!$("smtpForm")) return;
+  $("smtpId").value = acc?.id || "";
+  $("smtpName").value = acc?.name || "";
+  $("smtpHost").value = acc?.host || "";
+  $("smtpPort").value = acc?.port || "";
+  $("smtpSec").value = acc?.security || "starttls";
+  $("smtpUser").value = acc?.username || "";
+  $("smtpPass").value = "";
+  $("smtpFrom").value = acc?.from || "";
+  const out = $("smtpOut");
+  if (!out) return;
+  if (acc?.last_ok) {
+    out.hidden = false;
+    out.textContent = "Dernier test OK " + acc.last_ok;
+  } else if (acc?.last_error) {
+    out.hidden = false;
+    out.textContent = "Dernier test : " + acc.last_error;
+  } else {
+    out.hidden = true;
+  }
+}
+
+function renderMailAccounts(list) {
+  const accounts = list || [];
+  fillSmtp(accounts.find((a) => a.kind === "smtp"));
+  const imaps = accounts.filter((a) => a.kind === "imap");
+  const el = $("imapList");
+  if (!el) return;
+  el.innerHTML = imaps.map((a) => `
+    <div class="key-row">
+      <div>
+        <strong>${esc(a.name)}</strong>
+        <div><code>${esc(a.username)} · ${esc(a.host)}:${a.port} · ${esc(a.folder || "INBOX")}</code></div>
+        <div><code>${esc(a.last_ok ? "OK " + a.last_ok : (a.last_error || "pas encore testé"))}</code></div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" type="button" data-mail-test="${esc(a.id)}">Tester</button>
+        <button class="btn ghost" type="button" data-mail-del="${esc(a.id)}">Supprimer</button>
+      </div>
+    </div>`).join("") || `<p class="empty">Aucune boîte.</p>`;
 }
 
 function renderBackups(list) {
@@ -831,6 +891,95 @@ $("backupList")?.addEventListener("click", async (event) => {
     toast(out.restart ? "Restauration posée. Relance en cours." : "Restauration posée. Relance k-crm pour l'appliquer.");
   } catch (err) {
     $("backupErr").textContent = err.message;
+  }
+});
+document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
+  btn.addEventListener("click", () => showSettingsTab(btn.dataset.settingsTab));
+});
+$("smtpForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("smtpErr").textContent = "";
+  const id = $("smtpId").value;
+  const body = {
+    name: $("smtpName").value.trim(),
+    kind: "smtp",
+    host: $("smtpHost").value.trim(),
+    port: mailPort($("smtpPort").value),
+    security: $("smtpSec").value,
+    username: $("smtpUser").value.trim(),
+    password: $("smtpPass").value,
+    from: $("smtpFrom").value.trim()
+  };
+  try {
+    if (id) await api("POST", `/ui/api/mail-accounts/${id}`, body);
+    else await api("POST", "/ui/api/mail-accounts", body);
+    $("smtpPass").value = "";
+    await loadSettings();
+    toast(id ? "Compte d'envoi mis à jour." : "Compte d'envoi enregistré.");
+  } catch (err) {
+    $("smtpErr").textContent = err.message;
+  }
+});
+$("smtpTest")?.addEventListener("click", async () => {
+  $("smtpErr").textContent = "";
+  const id = $("smtpId").value;
+  if (!id) {
+    $("smtpErr").textContent = "enregistre le compte avant de tester";
+    return;
+  }
+  try {
+    const out = await api("POST", `/ui/api/mail-accounts/${id}/test`);
+    await loadSettings();
+    toast(out.ok ? "SMTP OK." : ("SMTP : " + (out.error || "échec")));
+    if (!out.ok) $("smtpErr").textContent = out.error || "échec";
+  } catch (err) {
+    $("smtpErr").textContent = err.message;
+  }
+});
+$("imapForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("imapErr").textContent = "";
+  try {
+    await api("POST", "/ui/api/mail-accounts", {
+      name: $("imapName").value.trim(),
+      kind: "imap",
+      host: $("imapHost").value.trim(),
+      port: mailPort($("imapPort").value),
+      security: $("imapSec").value,
+      username: $("imapUser").value.trim(),
+      password: $("imapPass").value,
+      folder: $("imapFolder").value.trim() || "INBOX"
+    });
+    $("imapForm").reset();
+    $("imapSec").value = "tls";
+    $("imapFolder").value = "INBOX";
+    await loadSettings();
+    toast("Boîte ajoutée.");
+  } catch (err) {
+    $("imapErr").textContent = err.message;
+  }
+});
+$("imapList")?.addEventListener("click", async (event) => {
+  const test = event.target.closest("[data-mail-test]");
+  const del = event.target.closest("[data-mail-del]");
+  $("imapErr").textContent = "";
+  try {
+    if (test) {
+      const out = await api("POST", `/ui/api/mail-accounts/${test.dataset.mailTest}/test`);
+      await loadSettings();
+      toast(out.ok ? "IMAP OK." : ("IMAP : " + (out.error || "échec")));
+      if (!out.ok) $("imapErr").textContent = out.error || "échec";
+      return;
+    }
+    if (del) {
+      const r = await fetch(`/ui/api/mail-accounts/${del.dataset.mailDel}`, { method: "DELETE" });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error || "delete");
+      await loadSettings();
+      toast("Boîte supprimée.");
+    }
+  } catch (err) {
+    $("imapErr").textContent = err.message;
   }
 });
 $("ingestForm")?.addEventListener("submit", async (event) => {
