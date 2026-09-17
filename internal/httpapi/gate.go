@@ -29,7 +29,7 @@ func (s *Server) gate(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if isPublicAsset(path) || path == "/install" || path == "/install/start" || path == "/install/confirm" || path == "/login" || path == "/logout" {
+		if isPublicAsset(path) || path == "/install" || path == "/install/start" || path == "/install/confirm" || path == "/install/status" || path == "/install/listen" || path == "/login" || path == "/logout" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -87,6 +87,36 @@ func (s *Server) installPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeFileFS(w, r, webui.Static(), "install.html")
+}
+
+func (s *Server) installStatus(w http.ResponseWriter, _ *http.Request) {
+	out := map[string]any{"done": false, "listen": s.Listen}
+	if s.Setup != nil {
+		out["done"] = s.Setup.Done()
+		if s.Listen == "" {
+			out["listen"] = s.Setup.Public().Listen
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) installListen(w http.ResponseWriter, r *http.Request) {
+	if s.Setup != nil && s.Setup.Done() {
+		writeErr(w, http.StatusConflict, "already installed")
+		return
+	}
+	var body struct {
+		Listen string `json:"listen"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	if err := setup.ValidateListen(body.Listen); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"listen": strings.TrimSpace(body.Listen)})
 }
 
 func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
@@ -157,7 +187,10 @@ func (s *Server) installConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.pending = nil
-	out := map[string]any{"ok": true, "user": s.Setup.User()}
+	out := map[string]any{"ok": true, "user": s.Setup.User(), "listen": s.Setup.Public().Listen}
+	if s.Listen != "" && s.Listen != s.Setup.Public().Listen {
+		out["restart"] = true
+	}
 	if !s.Setup.TokenAlreadyShown() {
 		out["token"] = s.Token
 		_ = s.Setup.MarkTokenShown()

@@ -24,6 +24,7 @@ type Server struct {
 	Mail        *mailacct.Store
 	Sessions    *sessions.Store
 	DataDir     string
+	Listen      string
 	pending     *setup.Pending
 	pendingTOTP string
 }
@@ -51,6 +52,8 @@ func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.HandleFunc("GET /install", s.installPage)
+	mux.HandleFunc("GET /install/status", s.installStatus)
+	mux.HandleFunc("POST /install/listen", s.installListen)
 	mux.HandleFunc("POST /install/start", s.installStart)
 	mux.HandleFunc("POST /install/confirm", s.installConfirm)
 	mux.HandleFunc("GET /login", s.loginPage)

@@ -63,18 +63,20 @@
           <form class="gate-form" id="step1">
             <div class="field">
               <label for="listen">IP et port</label>
-              <input id="listen" required value="100.100.73.244:8795" autocomplete="off">
+              <input id="listen" required value="" placeholder="IP:port" autocomplete="off">
             </div>
+            <p class="gate-note">Prérempli avec l’écoute actuelle. Jamais 0.0.0.0. Un autre bind s’applique au prochain lancement.</p>
             <button class="btn primary gate-submit" type="submit">Domaine</button>
           </form>
 
           <form class="gate-form" id="step2" hidden>
             <div class="field">
               <label for="domain">Nom de domaine</label>
-              <input id="domain" value="k-crm.op3.vpn" placeholder="crm.interne" autocomplete="off">
+              <input id="domain" value="" placeholder="crm.interne" autocomplete="off">
             </div>
-            <p class="gate-note">Optionnel si tu restes sur l’IP overlay. Utile derrière un nom interne.</p>
+            <p class="gate-note">Optionnel si tu restes sur l’IP. Utile derrière un nom interne.</p>
             <button class="btn primary gate-submit" type="submit">HTTPS</button>
+            <button class="btn gate-submit" type="button" data-back="1">Retour</button>
           </form>
 
           <form class="gate-form" id="step3" hidden>
@@ -83,6 +85,7 @@
             </label>
             <p class="gate-note">Coche seulement si un proxy termine le TLS. Le binaire refuse toujours 0.0.0.0.</p>
             <button class="btn primary gate-submit" type="submit">Compte</button>
+            <button class="btn gate-submit" type="button" data-back="2">Retour</button>
           </form>
 
           <form class="gate-form" id="step4" hidden>
@@ -100,6 +103,7 @@
               </div>
             </div>
             <button class="btn primary gate-submit" type="submit">Activer le 2FA</button>
+            <button class="btn gate-submit" type="button" data-back="3">Retour</button>
           </form>
 
           <form class="gate-form" id="step5" hidden>
@@ -110,10 +114,11 @@
               <input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
             </div>
             <button class="btn primary gate-submit" type="submit">Confirmer</button>
+            <button class="btn gate-submit" type="button" data-back="4">Retour</button>
           </form>
 
           <section id="done" hidden>
-            <p class="intro">Jeton agent, une seule fois. Copie-le. Il ne reviendra pas à l’écran.</p>
+            <p class="intro" id="doneNote">Jeton agent, une seule fois. Copie-le. Il ne reviendra pas à l’écran.</p>
             <p class="secret-box" id="tokenOnce"></p>
             <a class="btn primary gate-submit" href="/" style="display:grid;place-items:center;text-decoration:none">Ouvrir le pupitre</a>
           </section>
@@ -151,6 +156,10 @@
       if (!r.ok) throw new Error(data.error || r.status);
       return data;
     };
+    fetch("/install/status").then((r) => r.json()).then((d) => {
+      if (d.done) { location.href = "/"; return; }
+      if (d.listen) document.getElementById("listen").value = d.listen;
+    }).catch(() => {});
     const pw = document.getElementById("password");
     const toggle = document.getElementById("pwToggle");
     toggle.addEventListener("click", () => {
@@ -159,8 +168,20 @@
       toggle.setAttribute("aria-label", showPw ? "Masquer le mot de passe" : "Afficher le mot de passe");
       toggle.querySelector("use").setAttribute("href", showPw ? "#EyeOff" : "#Eye");
     });
-    document.getElementById("step1").addEventListener("submit", (e) => {
-      e.preventDefault(); err(""); show("step2"); setStep(2); document.getElementById("domain").focus();
+    document.querySelectorAll("[data-back]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const n = Number(btn.dataset.back);
+        err("");
+        show("step" + n);
+        setStep(n);
+      });
+    });
+    document.getElementById("step1").addEventListener("submit", async (e) => {
+      e.preventDefault(); err("");
+      try {
+        await api("/install/listen", { listen: document.getElementById("listen").value.trim() });
+        show("step2"); setStep(2); document.getElementById("domain").focus();
+      } catch (ex) { err(ex.message); }
     });
     document.getElementById("step2").addEventListener("submit", (e) => {
       e.preventDefault(); err(""); show("step3"); setStep(3);
@@ -187,6 +208,9 @@
       try {
         const data = await api("/install/confirm", { code: document.getElementById("code").value.trim() });
         document.getElementById("tokenOnce").textContent = data.token || "(déjà affiché)";
+        if (data.restart) {
+          document.getElementById("doneNote").textContent = "Jeton une seule fois. Relance k-crm pour appliquer la nouvelle écoute.";
+        }
         show("done"); setStep(6);
       } catch (ex) { err(ex.message); }
     });

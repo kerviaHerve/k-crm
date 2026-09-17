@@ -81,9 +81,6 @@ func run(args []string) error {
 		log.Printf("restore staged; next serve applies %s", *from)
 		return nil
 	case "serve":
-		if err := rejectWildcard(*listen); err != nil {
-			return err
-		}
 		token, err := loadOrCreateToken(filepath.Join(*dataDir, "token"))
 		if err != nil {
 			return err
@@ -104,11 +101,21 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, Mail: mail, Sessions: sess, DataDir: *dataDir}
-		ln, err := net.Listen("tcp", *listen)
+		listenSet := false
+		fs.Visit(func(f *flag.Flag) {
+			if f.Name == "listen" {
+				listenSet = true
+			}
+		})
+		addr := pickListen(*listen, listenSet, cfg)
+		if err := rejectWildcard(addr); err != nil {
+			return err
+		}
+		ln, err := net.Listen("tcp", addr)
 		if err != nil {
 			return err
 		}
+		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, Mail: mail, Sessions: sess, DataDir: *dataDir, Listen: ln.Addr().String()}
 		log.Printf("k-crm listen %s", ln.Addr())
 		log.Printf("token file %s", filepath.Join(*dataDir, "token"))
 		if !cfg.Done() {
@@ -118,6 +125,15 @@ func run(args []string) error {
 	default:
 		return fmt.Errorf("unknown command %q (serve|mcp|backup|restore)", cmd)
 	}
+}
+
+func pickListen(flagValue string, flagSet bool, cfg *setup.File) string {
+	if !flagSet && cfg != nil && cfg.Done() {
+		if l := strings.TrimSpace(cfg.Public().Listen); l != "" {
+			return l
+		}
+	}
+	return flagValue
 }
 
 func rejectWildcard(listen string) error {
