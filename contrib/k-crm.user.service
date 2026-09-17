@@ -1,0 +1,14 @@
+[Unit]
+Description=K-CRM
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/k-crm serve -listen 127.0.0.1:8740 -data %h/.local/share/k-crm
+Environment=KCRM_SYSTEMD=1
+Restart=always
+RestartSec=2
+UMask=077
+
+[Install]
+WantedBy=default.target

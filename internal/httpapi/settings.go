@@ -12,8 +12,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"brain.op3.ch/sun221/k-crm/internal/setup"
+	"brain.op3.ch/sun221/k-crm/internal/store"
 )
 
 func (s *Server) bearerOK(got string) bool {
@@ -47,6 +49,12 @@ func (s *Server) settingsMe(w http.ResponseWriter, r *http.Request) {
 		_, err := os.Stat(filepath.Join(s.DataDir, "avatar"))
 		out["has_avatar"] = err == nil
 	}
+	if s.Store != nil {
+		if list, err := s.Store.ListBackups(); err == nil {
+			out["backups"] = list
+		}
+	}
+	out["systemd"] = os.Getenv("KCRM_SYSTEMD") == "1"
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -234,4 +242,62 @@ func (s *Server) keysCreateTool(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) keysRevokeTool(w http.ResponseWriter, r *http.Request) {
 	s.keysRevoke(w, r)
+}
+
+func (s *Server) backupsList(w http.ResponseWriter, r *http.Request) {
+	list, err := s.Store.ListBackups()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"backups": list})
+}
+
+func (s *Server) backupsCreate(w http.ResponseWriter, r *http.Request) {
+	info, err := s.Store.Backup()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, info)
+}
+
+func (s *Server) backupsGet(w http.ResponseWriter, r *http.Request) {
+	name := filepath.Base(r.PathValue("name"))
+	if !store.ValidBackupName(name) {
+		writeErr(w, http.StatusBadRequest, "invalid backup name")
+		return
+	}
+	path := filepath.Join(s.DataDir, "backups", name)
+	if _, err := os.Stat(path); err != nil {
+		writeErr(w, http.StatusNotFound, "backup not found")
+		return
+	}
+	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
+	http.ServeFile(w, r, path)
+}
+
+func (s *Server) backupsRestore(w http.ResponseWriter, r *http.Request) {
+	name := filepath.Base(r.PathValue("name"))
+	if err := s.Store.StageRestore(name); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	restart := os.Getenv("KCRM_SYSTEMD") == "1"
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "restart": restart})
+	if restart {
+		go func() {
+			time.Sleep(400 * time.Millisecond)
+			os.Exit(0)
+		}()
+	}
+}
+
+func (s *Server) listLost(w http.ResponseWriter, r *http.Request) {
+	list, err := s.Store.ListLost()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"people": list})
 }

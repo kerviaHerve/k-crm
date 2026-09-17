@@ -54,6 +54,7 @@
         <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
         <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects<span class="count" data-count="prospects">0</span></button>
         <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients<span class="count" data-count="clients">0</span></button>
+        <button class="nav-btn" type="button" data-nav="lost"><svg class="icon" aria-hidden="true"><use href="#AlertTriangle"/></svg>Perdus<span class="count" data-count="lost">0</span></button>
         <button class="nav-btn" type="button" data-nav="settings"><svg class="icon" aria-hidden="true"><use href="#Settings2"/></svg>Réglages</button>
       </nav>
       <div class="sidebar-foot">
@@ -188,6 +189,17 @@
           <div class="stack" id="clientList"></div>
         </section>
 
+        <section class="view" id="view-lost" hidden>
+          <div class="view-head">
+            <div>
+              <h1>Perdus</h1>
+              <p>Prospects clos. Ils restent cherchables.</p>
+            </div>
+          </div>
+          <div class="filters" data-filter-bar></div>
+          <div class="stack" id="lostList"></div>
+        </section>
+
         <section class="view" id="view-person" hidden>
           <div class="view-head">
             <div>
@@ -274,6 +286,14 @@
               <div class="stack" id="keyList"></div>
               <p class="form-error" id="keyErr" aria-live="polite"></p>
             </article>
+
+            <article class="panel settings-wide">
+              <h2>Sauvegardes</h2>
+              <p>Copies SQLite locales. Restaurer remplace le carnet au prochain démarrage.</p>
+              <button class="btn primary" type="button" id="backupNow">Sauvegarder maintenant</button>
+              <div class="stack" id="backupList"></div>
+              <p class="form-error" id="backupErr" aria-live="polite"></p>
+            </article>
           </div>
         </section>
       </div>
@@ -286,6 +306,7 @@
     <button class="nav-btn" type="button" data-nav="chrono"><svg class="icon" aria-hidden="true"><use href="#Calendar"/></svg>Chrono</button>
     <button class="nav-btn" type="button" data-nav="prospects"><svg class="icon" aria-hidden="true"><use href="#UserPlus"/></svg>Prospects</button>
     <button class="nav-btn" type="button" data-nav="clients"><svg class="icon" aria-hidden="true"><use href="#Users"/></svg>Clients</button>
+    <button class="nav-btn" type="button" data-nav="lost"><svg class="icon" aria-hidden="true"><use href="#AlertTriangle"/></svg>Perdus</button>
   </nav>
 
   <div class="overlay" id="dialog" hidden>

@@ -16,9 +16,10 @@ import (
 )
 
 type Server struct {
-	Store *store.Store
-	Keys  *agentkeys.Store
-	Now   func() time.Time
+	Store  *store.Store
+	Keys   *agentkeys.Store
+	Now    func() time.Time
+	ndjson bool
 }
 
 type rpc struct {
@@ -45,7 +46,7 @@ func (s *Server) now() time.Time {
 func (s *Server) Serve(in io.Reader, out io.Writer) error {
 	r := bufio.NewReader(in)
 	for {
-		msg, err := readMsg(r)
+		msg, err := s.readMsg(r)
 		if err == io.EOF {
 			return nil
 		}
@@ -63,7 +64,7 @@ func (s *Server) Serve(in io.Reader, out io.Writer) error {
 		if req.ID == nil {
 			continue
 		}
-		if err := writeMsg(out, resp); err != nil {
+		if err := s.writeMsg(out, resp); err != nil {
 			return err
 		}
 	}
@@ -321,6 +322,12 @@ func (s *Server) call(params json.RawMessage) (map[string]any, error) {
 			return nil, err
 		}
 		return textResult(out)
+	case "crm_perdus":
+		list, err := s.Store.ListLost()
+		if err != nil {
+			return nil, err
+		}
+		return textResult(list)
 	default:
 		return nil, fmt.Errorf("unknown tool")
 	}
@@ -336,7 +343,19 @@ func textResult(v any) (map[string]any, error) {
 	}, nil
 }
 
-func readMsg(r *bufio.Reader) ([]byte, error) {
+func (s *Server) readMsg(r *bufio.Reader) ([]byte, error) {
+	b, err := r.Peek(1)
+	if err != nil {
+		return nil, err
+	}
+	if b[0] == '{' {
+		s.ndjson = true
+		line, err := r.ReadBytes('\n')
+		if err != nil && len(bytes.TrimSpace(line)) == 0 {
+			return nil, err
+		}
+		return bytes.TrimSpace(line), nil
+	}
 	n := 0
 	for {
 		line, err := r.ReadString('\n')
@@ -359,13 +378,17 @@ func readMsg(r *bufio.Reader) ([]byte, error) {
 		return nil, io.EOF
 	}
 	buf := make([]byte, n)
-	_, err := io.ReadFull(r, buf)
+	_, err = io.ReadFull(r, buf)
 	return buf, err
 }
 
-func writeMsg(w io.Writer, v any) error {
+func (s *Server) writeMsg(w io.Writer, v any) error {
 	b, err := json.Marshal(v)
 	if err != nil {
+		return err
+	}
+	if s.ndjson {
+		_, err = fmt.Fprintf(w, "%s\n", b)
 		return err
 	}
 	_, err = fmt.Fprintf(w, "Content-Length: %d\r\n\r\n%s", len(b), b)

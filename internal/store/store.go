@@ -17,10 +17,12 @@ import (
 var (
 	ErrNotFound    = errors.New("not found")
 	ErrNotProspect = errors.New("not a prospect")
+	ErrDuplicate   = errors.New("already in the book")
 )
 
 type Store struct {
-	db *sql.DB
+	db   *sql.DB
+	path string
 }
 
 type Person struct {
@@ -62,12 +64,15 @@ func Open(path string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, err
 	}
+	if err := applyStagedRestore(path); err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("sqlite", path+"?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	s := &Store{db: db}
+	s := &Store{db: db, path: path}
 	if err := s.migrate(); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -127,6 +132,11 @@ func (s *Store) CreateProspect(p Person, due, why, channel string) (Person, erro
 	}
 	if why == "" {
 		return Person{}, fmt.Errorf("relance why required")
+	}
+	if dup, ok, err := s.FindDuplicate(p); err != nil {
+		return Person{}, err
+	} else if ok {
+		return Person{}, fmt.Errorf("%w (%s)", ErrDuplicate, dup.Name)
 	}
 	p.ID = ids.New()
 	p.World = "prospect"

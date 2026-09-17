@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
+	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/webui"
 )
@@ -58,23 +58,26 @@ func isPublicAsset(path string) bool {
 		strings.HasPrefix(path, "/fonts/") || strings.HasPrefix(path, "/brand/")
 }
 
+func (s *Server) sess() *sessions.Store {
+	if s.Sessions == nil {
+		s.Sessions = sessions.Memory()
+	}
+	return s.Sessions
+}
+
 func (s *Server) sessionOK(r *http.Request) bool {
 	c, err := r.Cookie("kcrm")
-	if err != nil || c.Value == "" || s.sessions == nil {
+	if err != nil || c.Value == "" {
 		return false
 	}
-	_, ok := s.sessions.Load(c.Value)
-	return ok
+	return s.sess().Valid(c.Value)
 }
 
 func (s *Server) putSession(w http.ResponseWriter) {
-	if s.sessions == nil {
-		s.sessions = &sync.Map{}
-	}
 	raw := make([]byte, 32)
 	_, _ = rand.Read(raw)
 	id := hex.EncodeToString(raw)
-	s.sessions.Store(id, time.Now())
+	_ = s.sess().Put(id, 24*time.Hour)
 	http.SetCookie(w, &http.Cookie{Name: "kcrm", Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: 86400})
 }
 
@@ -182,8 +185,8 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie("kcrm"); err == nil && s.sessions != nil {
-		s.sessions.Delete(c.Value)
+	if c, err := r.Cookie("kcrm"); err == nil {
+		_ = s.sess().Delete(c.Value)
 	}
 	http.SetCookie(w, &http.Cookie{Name: "kcrm", Value: "", Path: "/", MaxAge: -1})
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})

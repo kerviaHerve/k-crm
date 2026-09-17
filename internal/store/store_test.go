@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -212,5 +213,73 @@ func TestSearchHitsNotesAndAccents(t *testing.T) {
 	byPhone, err := s.SearchHits("021555")
 	if err != nil || len(byPhone) != 1 {
 		t.Fatalf("phone %+v err=%v", byPhone, err)
+	}
+}
+
+func TestDuplicateEmailSkipped(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if _, err := s.CreateProspect(Person{Name: "Ada", Email: "ada@nord.ch"}, "2026-09-20", "appel", "mail"); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.CreateProspect(Person{Name: "Ada Lovelace", Email: "ADA@nord.ch"}, "2026-09-21", "suite", "mail")
+	if !errors.Is(err, ErrDuplicate) {
+		t.Fatalf("want duplicate, got %v", err)
+	}
+	csv := "name,org,due,why,email\nAda,Nord,2026-09-22,rappel,ada@nord.ch\n"
+	got, err := s.ImportProspects(strings.NewReader(csv))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Created != 0 || got.Skipped != 1 {
+		t.Fatalf("import dup %+v", got)
+	}
+}
+
+func TestBackupAndStagedRestore(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "k-crm.db")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CreateProspect(Person{Name: "Nora"}, "2026-09-20", "cadrage", "tel"); err != nil {
+		t.Fatal(err)
+	}
+	info, err := s.Backup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ValidBackupName(info.Name) {
+		t.Fatalf("name %s", info.Name)
+	}
+	if _, err := s.CreateProspect(Person{Name: "Later"}, "2026-09-21", "suite", "tel"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.StageRestore(info.Name); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	s2, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s2.Close()
+	hits, err := s2.Search("Nora")
+	if err != nil || len(hits) != 1 {
+		t.Fatalf("nora after restore %+v err=%v", hits, err)
+	}
+	later, err := s2.Search("Later")
+	if err != nil || len(later) != 0 {
+		t.Fatalf("later should be gone %+v err=%v", later, err)
+	}
+	lost, err := s2.ListLost()
+	if err != nil || len(lost) != 0 {
+		t.Fatalf("lost %+v err=%v", lost, err)
 	}
 }

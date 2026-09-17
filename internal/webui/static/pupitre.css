@@ -83,6 +83,7 @@ button { touch-action: manipulation; cursor: pointer; }
   width: 40px; height: 40px; object-fit: cover;
   border: 1px solid var(--line); background: var(--surface);
 }
+a.chip { text-decoration: none; color: inherit; }
 .owner-avatar.lg { width: 72px; height: 72px; }
 .avatar-fallback {
   width: 72px; height: 72px; display: grid; place-items: center;

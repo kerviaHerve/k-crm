@@ -15,6 +15,7 @@ import (
 	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/httpapi"
 	"brain.op3.ch/sun221/k-crm/internal/mcp"
+	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 )
@@ -35,6 +36,7 @@ func run(args []string) error {
 	fs := flag.NewFlagSet("k-crm", flag.ContinueOnError)
 	listen := fs.String("listen", "127.0.0.1:8740", "ip:port, loopback by default")
 	dataDir := fs.String("data", "./data", "directory for sqlite and token")
+	from := fs.String("from", "", "backup file name for restore")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -57,6 +59,22 @@ func run(args []string) error {
 			return err
 		}
 		return (&mcp.Server{Store: st, Keys: keys}).Serve(os.Stdin, os.Stdout)
+	case "backup":
+		info, err := st.Backup()
+		if err != nil {
+			return err
+		}
+		log.Printf("backup %s (%d bytes)", info.Name, info.Size)
+		return nil
+	case "restore":
+		if strings.TrimSpace(*from) == "" {
+			return fmt.Errorf("restore needs -from NAME.db")
+		}
+		if err := st.StageRestore(*from); err != nil {
+			return err
+		}
+		log.Printf("restore staged; next serve applies %s", *from)
+		return nil
 	case "serve":
 		if err := rejectWildcard(*listen); err != nil {
 			return err
@@ -73,7 +91,11 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, DataDir: *dataDir}
+		sess, err := sessions.Open(*dataDir)
+		if err != nil {
+			return err
+		}
+		srv := &httpapi.Server{Store: st, Token: token, Setup: cfg, Keys: keys, Sessions: sess, DataDir: *dataDir}
 		ln, err := net.Listen("tcp", *listen)
 		if err != nil {
 			return err
@@ -85,7 +107,7 @@ func run(args []string) error {
 		}
 		return http.Serve(ln, srv.Routes())
 	default:
-		return fmt.Errorf("unknown command %q (serve|mcp)", cmd)
+		return fmt.Errorf("unknown command %q (serve|mcp|backup|restore)", cmd)
 	}
 }
 

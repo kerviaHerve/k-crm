@@ -24,11 +24,11 @@ type TimelineEvent struct {
 
 type Card struct {
 	Person
-	Initials  string           `json:"initials"`
-	When      string           `json:"when"`
-	WhenLabel string           `json:"whenLabel"`
-	Next      string           `json:"next"`
-	Timeline  []TimelineEvent  `json:"timeline"`
+	Initials  string          `json:"initials"`
+	When      string          `json:"when"`
+	WhenLabel string          `json:"whenLabel"`
+	Next      string          `json:"next"`
+	Timeline  []TimelineEvent `json:"timeline"`
 }
 
 type DayCount struct {
@@ -267,6 +267,54 @@ func digits(s string) string {
 	return b.String()
 }
 
+func (s *Store) FindDuplicate(p Person) (Person, bool, error) {
+	all, err := s.queryPeople(`
+SELECT id,name,org,pole,world,lead,lead_state,phone,email,'','',''
+FROM people`)
+	if err != nil {
+		return Person{}, false, err
+	}
+	email := strings.ToLower(strings.TrimSpace(p.Email))
+	phone := digits(p.Phone)
+	nameKey := fold(strings.TrimSpace(p.Name)) + "\n" + fold(strings.TrimSpace(p.Org))
+	for _, cur := range all {
+		if email != "" && strings.ToLower(strings.TrimSpace(cur.Email)) == email {
+			return cur, true, nil
+		}
+		if len(phone) >= 8 && digits(cur.Phone) == phone {
+			return cur, true, nil
+		}
+		if fold(strings.TrimSpace(cur.Name))+"\n"+fold(strings.TrimSpace(cur.Org)) == nameKey {
+			return cur, true, nil
+		}
+	}
+	return Person{}, false, nil
+}
+
+func (s *Store) ListLost() ([]Person, error) {
+	return s.queryPeople(`
+SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,'','',''
+FROM people p WHERE p.lead_state='perdu' ORDER BY p.name`)
+}
+
+func (s *Store) OpenRelance(id string) (Person, error) {
+	list, err := s.queryPeople(`
+SELECT p.id,p.name,p.org,p.pole,p.world,p.lead,p.lead_state,p.phone,p.email,
+       COALESCE(r.due,''), COALESCE(r.why,''), COALESCE(r.channel,'')
+FROM people p
+LEFT JOIN relances r ON r.person_id=p.id AND r.open=1
+WHERE p.id=?
+ORDER BY r.due DESC
+LIMIT 1`, id)
+	if err != nil {
+		return Person{}, err
+	}
+	if len(list) == 0 {
+		return Person{}, ErrNotFound
+	}
+	return list[0], nil
+}
+
 func snippet(text, token string) string {
 	low := fold(text)
 	i := strings.Index(low, token)
@@ -462,13 +510,13 @@ func classify(p Person, day string, weekEnd string) (when, label, next string) {
 	next = p.Why
 	switch {
 	case p.Due < day:
-		return "overdue", "En retard · "+p.Due, next
+		return "overdue", "En retard · " + p.Due, next
 	case p.Due == day:
 		return "today", "Aujourd'hui", next
 	case p.Due <= weekEnd:
-		return "week", "Le "+p.Due, next
+		return "week", "Le " + p.Due, next
 	default:
-		return "week", "Le "+p.Due, next
+		return "week", "Le " + p.Due, next
 	}
 }
 

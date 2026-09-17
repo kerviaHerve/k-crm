@@ -1,6 +1,6 @@
 const themeNames = { carbon: "Carbon", atelier: "Atelier", studio: "Studio", mineral: "Minérale", sand: "Sable" };
 const sizeNames = { s: "Compacte", l: "Standard", xl: "Confortable" };
-const titles = { dash: "Tableau de bord", today: "Aujourd'hui", chrono: "Chrono", prospects: "Prospects", clients: "Clients", person: "Fiche", settings: "Réglages" };
+const titles = { dash: "Tableau de bord", today: "Aujourd'hui", chrono: "Chrono", prospects: "Prospects", clients: "Clients", lost: "Perdus", person: "Fiche", settings: "Réglages" };
 const POLES = ["Kervia", "Exonik", "EmoSana", "OP3", "perso"];
 
 let people = [];
@@ -104,9 +104,11 @@ function counts() {
   const today = people.filter((p) => ["overdue", "today", "orphan"].includes(p.when)).length;
   const prospects = people.filter((p) => p.world === "prospect" && p.leadState !== "perdu").length;
   const clients = people.filter((p) => p.world === "client").length;
+  const lost = people.filter((p) => p.leadState === "perdu").length;
   document.querySelectorAll("[data-count=today]").forEach((el) => { el.textContent = String(today); });
   document.querySelectorAll("[data-count=prospects]").forEach((el) => { el.textContent = String(prospects); });
   document.querySelectorAll("[data-count=clients]").forEach((el) => { el.textContent = String(clients); });
+  document.querySelectorAll("[data-count=lost]").forEach((el) => { el.textContent = String(lost); });
 }
 
 function relanceCard(p, withActions) {
@@ -149,6 +151,11 @@ function personRow(p) {
     </button>`;
 }
 
+function telHref(phone) {
+  const t = String(phone || "").replace(/[^\d+]/g, "");
+  return t ? `tel:${t}` : "";
+}
+
 function detailHtml(p) {
   if (!p) return `<h2>Fiche</h2><p class="empty">Choisis une relance pour voir la personne.</p>`;
   const timeline = (p.timeline || []).map((e) => `
@@ -163,8 +170,8 @@ function detailHtml(p) {
       ${worldChip(p.world)}
       <span class="chip">${esc(p.pole)}</span>
       <span class="chip">Lead ${esc(p.leadState)}</span>
-      ${p.phone ? `<span class="chip"><svg class="icon" aria-hidden="true"><use href="#Phone"/></svg>${esc(p.phone)}</span>` : ""}
-      ${p.email ? `<span class="chip"><svg class="icon" aria-hidden="true"><use href="#Mail"/></svg>${esc(p.email)}</span>` : ""}
+      ${p.phone ? `<a class="chip" href="${telHref(p.phone)}"><svg class="icon" aria-hidden="true"><use href="#Phone"/></svg>${esc(p.phone)}</a>` : ""}
+      ${p.email ? `<a class="chip" href="mailto:${esc(p.email)}"><svg class="icon" aria-hidden="true"><use href="#Mail"/></svg>${esc(p.email)}</a>` : ""}
     </div>
     ${p.lead ? `<p>${esc(p.lead)}</p>` : ""}
     <div class="next-action">
@@ -244,10 +251,14 @@ function renderToday() {
 }
 
 function renderLists() {
-  const prospects = byPole(people.filter((p) => p.world === "prospect"));
+  const prospects = byPole(people.filter((p) => p.world === "prospect" && p.leadState !== "perdu"));
   const clients = byPole(people.filter((p) => p.world === "client"));
+  const lost = byPole(people.filter((p) => p.leadState === "perdu"));
   $("prospectList").innerHTML = prospects.length ? prospects.map(personRow).join("") : `<div class="empty">Aucun prospect.</div>`;
   $("clientList").innerHTML = clients.length ? clients.map(personRow).join("") : `<div class="empty">Aucun client.</div>`;
+  if ($("lostList")) {
+    $("lostList").innerHTML = lost.length ? lost.map(personRow).join("") : `<div class="empty">Aucun perdu.</div>`;
+  }
 }
 
 function renderPerson(id) {
@@ -261,6 +272,9 @@ function renderPerson(id) {
     <h2>Gestes</h2>
     <p>${p.world === "prospect" ? "Tant que le lead n'est pas validé, cette fiche reste un prospect." : "Lead déjà validé. Relance optionnelle."}</p>
     <div class="stack">
+      ${p.phone ? `<a class="btn" href="${telHref(p.phone)}">Appeler</a>` : ""}
+      ${p.email ? `<a class="btn" href="mailto:${esc(p.email)}">Écrire</a>` : ""}
+      ${p.due ? `<a class="btn" href="/ui/api/people/${p.id}/relance.ics">Agenda</a>` : ""}
       ${p.world === "prospect" && p.leadState !== "perdu" ? `<button class="btn primary" type="button" data-act="validate" data-id="${p.id}">Valider le lead</button>` : ""}
       <button class="btn" type="button" data-act="edit" data-id="${p.id}">Modifier la fiche</button>
       <button class="btn" type="button" data-act="note" data-id="${p.id}">Ajouter une note</button>
@@ -315,7 +329,7 @@ function showView(name, id) {
   if (name === "dash") renderDash();
   if (name === "today") renderToday();
   if (name === "chrono") renderChrono();
-  if (name === "prospects" || name === "clients") renderLists();
+  if (name === "prospects" || name === "clients" || name === "lost") renderLists();
   if (name === "person") renderPerson(selectedId);
   if (name === "settings") loadSettings();
   renderFilters();
@@ -439,6 +453,7 @@ async function renderPalette() {
     { label: "Chrono", sub: "vue", run: () => showView("chrono") },
     { label: "Prospects", sub: "vue", run: () => showView("prospects") },
     { label: "Clients", sub: "vue", run: () => showView("clients") },
+    { label: "Perdus", sub: "vue", run: () => showView("lost") },
     { label: "Réglages", sub: "vue", run: () => showView("settings") }
   ];
   const qn = q.toLowerCase();
@@ -680,9 +695,26 @@ async function loadSettings() {
     if (fb) fb.textContent = (data.user || "?").slice(0, 1).toUpperCase();
     setAvatar(!!data.has_avatar);
     renderKeys(data.keys);
+    renderBackups(data.backups || []);
   } catch (err) {
     toast(err.message);
   }
+}
+
+function renderBackups(list) {
+  const el = $("backupList");
+  if (!el) return;
+  el.innerHTML = (list || []).map((b) => `
+    <div class="key-row">
+      <div>
+        <strong>${esc(b.name)}</strong>
+        <div><code>${esc(b.at || "")} · ${b.size || 0} o</code></div>
+      </div>
+      <div class="actions">
+        <a class="btn ghost" href="/ui/api/backups/${encodeURIComponent(b.name)}">Télécharger</a>
+        <button class="btn ghost" type="button" data-restore="${esc(b.name)}">Restaurer</button>
+      </div>
+    </div>`).join("") || `<p class="empty">Aucune copie.</p>`;
 }
 
 $("logoutBtn")?.addEventListener("click", async () => {
@@ -777,6 +809,28 @@ $("keyList")?.addEventListener("click", async (event) => {
     toast("Clé révoquée.");
   } catch (err) {
     $("keyErr").textContent = err.message;
+  }
+});
+$("backupNow")?.addEventListener("click", async () => {
+  $("backupErr").textContent = "";
+  try {
+    await api("POST", "/ui/api/backups");
+    await loadSettings();
+    toast("Sauvegarde créée.");
+  } catch (err) {
+    $("backupErr").textContent = err.message;
+  }
+});
+$("backupList")?.addEventListener("click", async (event) => {
+  const btn = event.target.closest("[data-restore]");
+  if (!btn) return;
+  if (!confirm("Remplacer le carnet par cette copie au prochain démarrage ?")) return;
+  $("backupErr").textContent = "";
+  try {
+    const out = await api("POST", `/ui/api/backups/${encodeURIComponent(btn.dataset.restore)}/restore`);
+    toast(out.restart ? "Restauration posée. Relance en cours." : "Restauration posée. Relance k-crm pour l'appliquer.");
+  } catch (err) {
+    $("backupErr").textContent = err.message;
   }
 });
 

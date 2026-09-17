@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"sync"
 	"time"
 
 	"brain.op3.ch/sun221/k-crm/internal/agentkeys"
 	"brain.op3.ch/sun221/k-crm/internal/catalog"
+	"brain.op3.ch/sun221/k-crm/internal/sessions"
 	"brain.op3.ch/sun221/k-crm/internal/setup"
 	"brain.op3.ch/sun221/k-crm/internal/store"
 	"brain.op3.ch/sun221/k-crm/internal/webui"
@@ -20,10 +20,10 @@ type Server struct {
 	Now         func() time.Time
 	Setup       *setup.File
 	Keys        *agentkeys.Store
+	Sessions    *sessions.Store
 	DataDir     string
 	pending     *setup.Pending
 	pendingTOTP string
-	sessions    *sync.Map
 }
 
 type createBody struct {
@@ -107,6 +107,13 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/tools/crm_cles_lister", s.auth(s.keysList))
 	mux.HandleFunc("POST /api/v1/tools/crm_cles_creer", s.auth(s.keysCreateTool))
 	mux.HandleFunc("POST /api/v1/tools/crm_cles_revoquer", s.auth(s.keysRevokeTool))
+	mux.HandleFunc("GET /ui/api/people/{id}/relance.ics", s.relanceICS)
+	mux.HandleFunc("GET /api/v1/perdus", s.auth(s.listLost))
+	mux.HandleFunc("POST /api/v1/tools/crm_perdus", s.auth(s.listLost))
+	mux.HandleFunc("GET /ui/api/backups", s.backupsList)
+	mux.HandleFunc("POST /ui/api/backups", s.backupsCreate)
+	mux.HandleFunc("GET /ui/api/backups/{name}", s.backupsGet)
+	mux.HandleFunc("POST /ui/api/backups/{name}/restore", s.backupsRestore)
 	webui.Mount(mux, s.Store, s.now)
 	return s.gate(mux)
 }
@@ -175,7 +182,7 @@ func storeHTTP(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusNotFound, err.Error())
 		return
 	}
-	if errors.Is(err, store.ErrNotProspect) || errors.Is(err, store.ErrLost) {
+	if errors.Is(err, store.ErrNotProspect) || errors.Is(err, store.ErrLost) || errors.Is(err, store.ErrDuplicate) {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}

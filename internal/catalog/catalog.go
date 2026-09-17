@@ -86,6 +86,11 @@ func All() []Tool {
 			Properties:  map[string]any{"q": str, "query": str},
 		},
 		{
+			Name:        "crm_perdus",
+			Description: "Liste les prospects marques perdus.",
+			HTTP:        []string{"GET /api/v1/perdus", "POST /api/v1/tools/crm_perdus"},
+		},
+		{
 			Name:        "crm_cles_lister",
 			Description: "Liste les cles agent (sans secret).",
 			HTTP:        []string{"GET /api/v1/keys", "POST /api/v1/tools/crm_cles_lister"},
