@@ -13,10 +13,12 @@ BIN="$ROOT/k-crm"
 DRY_RUN=0
 LISTEN_FLAG=""
 DATA_FLAG=""
+PLAIN=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
+    --plain) PLAIN=1; shift ;;
     --listen)
       LISTEN_FLAG="${2-}"
       shift 2
@@ -26,7 +28,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      printf '%s\n' "Usage: ./install.sh [--listen IP:PORT] [--data DIR] [--dry-run]"
+      printf '%s\n' "Usage: ./install.sh [--listen IP:PORT] [--data DIR] [--dry-run] [--plain]"
       exit 0
       ;;
     *)
@@ -36,13 +38,33 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-say() { printf '%s\n' "$*"; }
-err() { printf 'Erreur: %s\n' "$*" >&2; }
-pause() {
-  if [[ -t 0 && "$DRY_RUN" -eq 0 ]]; then
-    read -r -p "Entree pour continuer. " _
-  fi
+USE_TUI=0
+if [[ "$PLAIN" -eq 0 && -t 0 && -t 1 && "${TERM:-dumb}" != "dumb" ]]; then
+  USE_TUI=1
+fi
+
+if [[ "$USE_TUI" -eq 1 && -z "${NO_COLOR:-}" ]]; then
+  C_COPPER=$'\033[38;2;216;106;50m'
+  C_MUTE=$'\033[38;2;138;128;118m'
+  C_FG=$'\033[38;2;244;239;232m'
+  C_OK=$'\033[38;2;122;158;90m'
+  C_ERR=$'\033[38;2;196;70;50m'
+  C_BOLD=$'\033[1m'
+  C_RESET=$'\033[0m'
+  C_HIDE=$'\033[?25l'
+  C_SHOW=$'\033[?25h'
+else
+  C_COPPER="" C_MUTE="" C_FG="" C_OK="" C_ERR="" C_BOLD="" C_RESET=""
+  C_HIDE="" C_SHOW=""
+fi
+
+tui_cleanup() {
+  printf '%s' "$C_SHOW"
 }
+trap tui_cleanup EXIT INT TERM
+
+say() { printf '%s\n' "$*"; }
+err() { printf '%sErreur:%s %s\n' "$C_ERR" "$C_RESET" "$*" >&2; }
 
 need_tty() {
   if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -57,9 +79,106 @@ need_tty() {
   fi
 }
 
+tui_clear() {
+  if [[ "$USE_TUI" -eq 1 ]]; then
+    printf '\033[H\033[2J%s' "$C_HIDE"
+  fi
+}
+
+tui_rule() {
+  local n="${1:-56}"
+  local i s=""
+  for ((i = 0; i < n; i++)); do
+    s+="─"
+  done
+  printf '  %s%s%s\n' "$C_MUTE" "$s" "$C_RESET"
+}
+
+tui_header() {
+  [[ "$USE_TUI" -eq 1 ]] || return 0
+  local step="$1" title="$2"
+  tui_clear
+  printf '\n  %s%sK-CRM%s  %sbootstrap%s\n' "$C_COPPER" "$C_BOLD" "$C_RESET" "$C_MUTE" "$C_RESET"
+  printf '  %sLe wizard navigateur fait l'\''install. Ici: Go, binaire, écoute.%s\n\n' "$C_MUTE" "$C_RESET"
+  tui_rail "$step"
+  tui_rule 56
+  printf '\n  %s%s%s\n\n' "$C_BOLD$C_FG" "$title" "$C_RESET"
+}
+
+tui_rail() {
+  local cur="$1"
+  local names=("Go" "Binaire" "Écoute" "Données")
+  local i label
+  printf '  '
+  for i in 1 2 3 4; do
+    label="${names[$((i - 1))]}"
+    if (( i == cur )); then
+      printf '%s%s%d %s%s' "$C_COPPER$C_BOLD" "" "$i" "$label" "$C_RESET"
+    elif (( i < cur )); then
+      printf '%s%d %s%s' "$C_OK" "$i" "$label" "$C_RESET"
+    else
+      printf '%s%d %s%s' "$C_MUTE" "$i" "$label" "$C_RESET"
+    fi
+    if (( i < 4 )); then
+      printf '%s  ·  %s' "$C_MUTE" "$C_RESET"
+    fi
+  done
+  printf '\n\n'
+}
+
+tui_note() {
+  if [[ "$USE_TUI" -eq 0 ]]; then
+    say "$*"
+    return 0
+  fi
+  printf '  %s%s%s\n' "$C_MUTE" "$*" "$C_RESET"
+}
+
+tui_ok() {
+  if [[ "$USE_TUI" -eq 0 ]]; then
+    say "$*"
+    return 0
+  fi
+  printf '  %s●%s  %s\n' "$C_OK" "$C_RESET" "$*"
+}
+
+tui_key() {
+  local k
+  IFS= read -rsn1 k || return 1
+  if [[ "$k" == $'\x1b' ]]; then
+    local r=""
+    IFS= read -rsn2 r || true
+    case "$r" in
+      '[A') printf 'UP' ;;
+      '[B') printf 'DOWN' ;;
+      '[C') printf 'RIGHT' ;;
+      '[D') printf 'LEFT' ;;
+      *) printf 'ESC' ;;
+    esac
+    return 0
+  fi
+  if [[ -z "$k" || "$k" == $'\n' || "$k" == $'\r' ]]; then
+    printf 'ENTER'
+    return 0
+  fi
+  printf '%s' "$k"
+}
+
 ask() {
-  local prompt="$1" default="${2-}"
-  local reply
+  local prompt="$1" default="${2-}" reply
+  if [[ "$USE_TUI" -eq 1 ]]; then
+    printf '  %s%s%s' "$C_FG" "$prompt" "$C_RESET" >&2
+    if [[ -n "$default" ]]; then
+      printf '  %s[%s]%s ' "$C_MUTE" "$default" "$C_RESET" >&2
+    else
+      printf ' ' >&2
+    fi
+    printf '%s' "$C_SHOW" >&2
+    read -r reply
+    printf '%s' "$C_HIDE" >&2
+    printf '%s' "${reply:-$default}"
+    return
+  fi
   if [[ -n "$default" ]]; then
     read -r -p "$prompt [$default] " reply
     printf '%s' "${reply:-$default}"
@@ -70,13 +189,49 @@ ask() {
 }
 
 yesno() {
-  local prompt="$1" default="${2:-n}" reply
+  local prompt="$1" default="${2:-n}" reply sel
+  if [[ "$USE_TUI" -eq 1 ]]; then
+    if [[ "$default" == "o" || "$default" == "O" ]]; then sel=0; else sel=1; fi
+    while true; do
+      printf '\r  %s%s%s  ' "$C_FG" "$prompt" "$C_RESET"
+      if (( sel == 0 )); then
+        printf '%s[ Oui ]%s  %sNon%s   ' "$C_COPPER$C_BOLD" "$C_RESET" "$C_MUTE" "$C_RESET"
+      else
+        printf '%sOui%s  %s[ Non ]%s   ' "$C_MUTE" "$C_RESET" "$C_COPPER$C_BOLD" "$C_RESET"
+      fi
+      printf '%s' "$C_SHOW"
+      reply="$(tui_key || true)"
+      printf '%s' "$C_HIDE"
+      case "$reply" in
+        LEFT|RIGHT) sel=$((1 - sel)) ;;
+        ENTER) printf '\n'; (( sel == 0 )) && return 0 || return 1 ;;
+        o|O|y|Y) printf '\n'; return 0 ;;
+        n|N) printf '\n'; return 1 ;;
+      esac
+    done
+  fi
   read -r -p "$prompt " reply
   reply="${reply:-$default}"
   case "$reply" in
     o|O|oui|Oui|y|Y|yes|YES) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+pause() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    return 0
+  fi
+  if [[ "$USE_TUI" -eq 1 ]]; then
+    printf '\n  %sEntrée pour continuer%s' "$C_MUTE" "$C_RESET"
+    printf '%s' "$C_SHOW"
+    read -r _
+    printf '%s' "$C_HIDE"
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    read -r -p "Entree pour continuer. " _
+  fi
 }
 
 go_ver_ok() {
@@ -119,34 +274,25 @@ install_go_tarball() {
   local tmp url
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/kcrm-go.XXXXXX")"
   url="https://go.dev/dl/go${GO_TARBALL_VER}.linux-amd64.tar.gz"
-  say "Telechargement de Go ${GO_TARBALL_VER} (officiel, sans snap, sans root)..."
-  say "$url"
+  tui_note "Téléchargement officiel de Go ${GO_TARBALL_VER} (pas de snap, pas de root)."
+  tui_note "$url"
   if ! command -v curl >/dev/null 2>&1; then
     err "curl est requis pour installer Go."
     exit 1
   fi
+  printf '%s' "$C_SHOW"
   curl -fL --retry 3 --retry-delay 1 -o "$tmp/go.tgz" "$url"
+  printf '%s' "$C_HIDE"
   rm -rf "$dest"
   mkdir -p "$HOME/.local/share"
   tar -C "$tmp" -xzf "$tmp/go.tgz"
   mv "$tmp/go" "$dest"
   rm -rf "$tmp"
   if [[ ! -x "$dest/bin/go" ]] || ! go_ver_ok "$dest/bin/go"; then
-    err "Go installe mais inutilisable dans $dest"
+    err "Go installé mais inutilisable dans $dest"
     exit 1
   fi
-  say "Go installe dans $dest"
   printf '%s' "$dest/bin/go"
-}
-
-ip_kind() {
-  case "$1" in
-    127.*|::1) printf 'loopback' ;;
-    100.*) printf 'overlay' ;;
-    10.*|192.168.*) printf 'lan' ;;
-    172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) printf 'docker' ;;
-    *) printf 'public' ;;
-  esac
 }
 
 list_ips() {
@@ -183,7 +329,6 @@ for s in show:
 PY
 }
 
-# 0 = free, 1 = taken, 2 = IP not on this machine
 probe_port() {
   python3 - "$1" "$2" <<'PY'
 import errno, socket, sys
@@ -224,23 +369,35 @@ refuse_wildcard() {
   esac
 }
 
-resolve_host_choice() {
-  local raw="$1"
-  local n
-  if [[ "$raw" =~ ^[0-9]+$ ]]; then
-    n=$((raw))
-    if (( n < 1 || n > ${#IPS[@]} )); then
-      err "le numero $raw n'est pas dans la liste (1-${#IPS[@]})."
-      return 1
+kind_label() {
+  case "$1" in
+    overlay) printf 'overlay, recommandée' ;;
+    lan) printf 'réseau local' ;;
+    public) printf 'publique, visible depuis Internet' ;;
+    loopback) printf 'cette machine seulement' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+draw_ip_list() {
+  local sel="$1" i=0 ip kind mark
+  for ip in "${IPS[@]}"; do
+    kind="${KINDS[$i]}"
+    if (( i == sel )); then
+      printf '    %s›%s  %s%-2d%s  %s%-15s%s  %s\n' \
+        "$C_COPPER" "$C_RESET" "$C_COPPER$C_BOLD" "$((i + 1))" "$C_RESET" \
+        "$C_FG" "$ip" "$C_RESET" "$(kind_label "$kind")"
+    else
+      printf '       %s%-2d%s  %s%-15s%s  %s%s%s\n' \
+        "$C_MUTE" "$((i + 1))" "$C_RESET" \
+        "$C_FG" "$ip" "$C_RESET" "$C_MUTE" "$(kind_label "$kind")" "$C_RESET"
     fi
-    printf '%s' "${IPS[$((n - 1))]}"
-    return 0
-  fi
-  printf '%s' "$raw"
+    i=$((i + 1))
+  done
 }
 
 choose_listen() {
-  local i extra kind reply
+  local i reply HOST_TRY sel=0
   mapfile -t IP_ROWS < <(list_ips)
   IPS=()
   KINDS=()
@@ -250,27 +407,59 @@ choose_listen() {
     KINDS+=("${row#* }")
   done
   if ((${#IPS[@]} == 0)); then
-    say "Aucune IP non-loopback vue. 127.0.0.1 ne sera visible que sur cette machine."
     IPS=(127.0.0.1)
     KINDS=(loopback)
   fi
-  say "Adresses utiles (les ponts Docker sont masques):"
-  i=1
-  for ip in "${IPS[@]}"; do
-    kind="${KINDS[$((i - 1))]}"
-    extra=""
-    case "$kind" in
-      overlay) extra=" (overlay, recommandee)" ;;
-      lan) extra=" (reseau local)" ;;
-      public) extra=" (publique, visible depuis Internet)" ;;
-      loopback) extra=" (cette machine seulement)" ;;
-    esac
-    say "  $i) $ip$extra"
-    i=$((i + 1))
-  done
-  DEFAULT_IP="${IPS[0]}"
-  reply="$(ask "IP a binder (numero ou adresse)" "$DEFAULT_IP")"
-  HOST="$(resolve_host_choice "$reply")" || exit 1
+
+  if [[ "$USE_TUI" -eq 1 ]]; then
+    while true; do
+      tui_header 3 "Adresse d'écoute"
+      tui_note "IP explicite, jamais 0.0.0.0. Les ponts Docker sont masqués."
+      printf '\n'
+      draw_ip_list "$sel"
+      printf '\n  %s↑↓ choisir · entrée valider · ou un numéro%s\n' "$C_MUTE" "$C_RESET"
+      reply="$(tui_key || true)"
+      case "$reply" in
+        UP) (( sel > 0 )) && sel=$((sel - 1)) ;;
+        DOWN) (( sel < ${#IPS[@]} - 1 )) && sel=$((sel + 1)) ;;
+        ENTER)
+          HOST="${IPS[$sel]}"
+          break
+          ;;
+        [1-9])
+          i=$((reply))
+          if (( i >= 1 && i <= ${#IPS[@]} )); then
+            HOST="${IPS[$((i - 1))]}"
+            break
+          fi
+          ;;
+        i|I)
+          tui_header 3 "Adresse d'écoute"
+          HOST="$(ask "IP à binder" "${IPS[$sel]}")"
+          break
+          ;;
+      esac
+    done
+  else
+    say "Adresses utiles (les ponts Docker sont masques):"
+    i=1
+    for ip in "${IPS[@]}"; do
+      say "  $i) $ip ($(kind_label "${KINDS[$((i - 1))]}"))"
+      i=$((i + 1))
+    done
+    reply="$(ask "IP a binder (numero ou adresse)" "${IPS[0]}")"
+    if [[ "$reply" =~ ^[0-9]+$ ]]; then
+      i=$((reply))
+      if (( i < 1 || i > ${#IPS[@]} )); then
+        err "le numero $reply n'est pas dans la liste (1-${#IPS[@]})."
+        exit 1
+      fi
+      HOST="${IPS[$((i - 1))]}"
+    else
+      HOST="$reply"
+    fi
+  fi
+
   if refuse_wildcard "$HOST"; then
     err "refus de binder $HOST — passe une IP explicite."
     exit 1
@@ -278,14 +467,21 @@ choose_listen() {
   PROBE_RC=0
   probe_port "$HOST" 8740 || PROBE_RC=$?
   if [[ "$PROBE_RC" -eq 2 ]]; then
-    err "$HOST n'est pas une adresse de cette machine. Tape un numero de la liste, ou l'IP complete."
+    err "$HOST n'est pas une adresse de cette machine. Reprends avec un numéro de la liste."
     exit 1
   fi
   if ! DEFAULT_PORT="$(find_free_port "$HOST")"; then
     err "aucun port libre entre 8740 et 8899 sur $HOST."
     exit 1
   fi
-  say "Port libre propose: $DEFAULT_PORT"
+  if [[ "$USE_TUI" -eq 1 ]]; then
+    tui_header 3 "Adresse d'écoute"
+    tui_ok "$HOST"
+    tui_note "Port libre proposé: $DEFAULT_PORT"
+    printf '\n'
+  else
+    say "Port libre propose: $DEFAULT_PORT"
+  fi
   PORT="$(ask "Port" "$DEFAULT_PORT")"
   if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
     err "port invalide: $PORT"
@@ -300,27 +496,35 @@ choose_listen() {
 
 need_tty
 
-say "K-CRM — bootstrap"
-say "Ce script construit le binaire. L'install, c'est le wizard dans le navigateur."
-say "Depot: $ROOT"
-pause
+if [[ "$USE_TUI" -eq 0 ]]; then
+  say "K-CRM — bootstrap"
+  say "Ce script construit le binaire. L'install, c'est le wizard dans le navigateur."
+  say "Depot: $ROOT"
+  pause
+fi
 
 if [[ ! -f "$ROOT/go.mod" || ! -d "$ROOT/cmd/k-crm" ]]; then
   err "ce dossier n'est pas le depot K-CRM (go.mod / cmd/k-crm manquants)."
   exit 1
 fi
 
-say ""
-say "1/4  Go"
+tui_header 1 "Go 1.26+"
+if [[ "$USE_TUI" -eq 0 ]]; then
+  say ""
+  say "1/4  Go"
+fi
 GO_BIN=""
 if GO_BIN="$(find_go)"; then
-  say "Trouve: $GO_BIN ($("$GO_BIN" version))"
+  tui_ok "$GO_BIN"
+  tui_note "$("$GO_BIN" version)"
 else
-  say "Go ${GO_MIN_MAJOR}.${GO_MIN_MINOR}+ introuvable dans le PATH."
-  say "Pas de snap, pas de paquet Ubuntu: telechargement officiel dans ~/.local/share."
-  if yesno "Installer Go ${GO_TARBALL_VER} maintenant ? [O/n]" o; then
+  tui_note "Go ${GO_MIN_MAJOR}.${GO_MIN_MINOR}+ introuvable dans le PATH."
+  tui_note "Pas de snap, pas de paquet Ubuntu: téléchargement officiel dans ~/.local/share."
+  printf '\n'
+  if yesno "Installer Go ${GO_TARBALL_VER} maintenant ?" o; then
     GO_BIN="$(install_go_tarball)"
-    say "OK: $GO_BIN ($("$GO_BIN" version))"
+    tui_ok "$GO_BIN"
+    tui_note "$("$GO_BIN" version)"
   else
     err "sans Go, impossible de construire. Relance le script quand tu es pret."
     exit 1
@@ -332,28 +536,33 @@ if ! command -v go >/dev/null 2>&1 || ! go_ver_ok "$(command -v go)"; then
   exit 1
 fi
 if [[ "$DRY_RUN" -eq 0 ]] && ! grep -q 'go1.26\|/.local/share/go' "$HOME/.profile" 2>/dev/null; then
-  if yesno "Ajouter Go au PATH dans ~/.profile pour les prochains terminaux ? [o/N]" n; then
+  printf '\n'
+  if yesno "Ajouter Go au PATH dans ~/.profile ?" n; then
     {
       printf '\n# K-CRM Go\n'
       printf 'export PATH="%s:$PATH"\n' "$(dirname "$GO_BIN")"
     } >> "$HOME/.profile"
-    say "Ajoute dans ~/.profile. Ouvre un nouveau terminal, ou: source ~/.profile"
+    tui_ok "Ajouté dans ~/.profile"
   fi
 fi
-pause
+if [[ "$USE_TUI" -eq 0 ]]; then pause; fi
 
-say ""
-say "2/4  Construction"
+tui_header 2 "Construction du binaire"
+if [[ "$USE_TUI" -eq 0 ]]; then
+  say ""
+  say "2/4  Construction"
+fi
 export CGO_ENABLED=0
-say "go build -o k-crm ./cmd/k-crm"
+tui_note "go build -o k-crm ./cmd/k-crm"
+printf '%s' "$C_SHOW"
 "$GO_BIN" build -o "$BIN" ./cmd/k-crm
+printf '%s' "$C_HIDE"
 chmod 755 "$BIN"
-say "Binaire: $BIN"
-pause
+tui_ok "$BIN"
+if [[ "$USE_TUI" -eq 0 ]]; then pause; fi
 
-say ""
-say "3/4  Adresse d'ecoute (IP explicite, jamais 0.0.0.0)"
 if [[ -n "$LISTEN_FLAG" ]]; then
+  tui_header 3 "Adresse d'écoute"
   LISTEN="$LISTEN_FLAG"
   HOST="${LISTEN%:*}"
   PORT="${LISTEN##*:}"
@@ -361,15 +570,27 @@ if [[ -n "$LISTEN_FLAG" ]]; then
     err "refus de binder $HOST"
     exit 1
   fi
-  say "Listen (flag): $LISTEN"
+  tui_ok "$LISTEN"
 else
+  if [[ "$USE_TUI" -eq 0 ]]; then
+    say ""
+    say "3/4  Adresse d'ecoute (IP explicite, jamais 0.0.0.0)"
+  fi
   choose_listen
 fi
-say "Listen: $LISTEN"
-pause
+tui_ok "Listen $LISTEN"
+if [[ "$USE_TUI" -eq 0 ]]; then
+  say "Listen: $LISTEN"
+  pause
+fi
 
-say ""
-say "4/4  Donnees (carnet, jeton, sessions). Pas le carnet d'une autre install."
+tui_header 4 "Dossier data"
+if [[ "$USE_TUI" -eq 0 ]]; then
+  say ""
+  say "4/4  Donnees (carnet, jeton, sessions). Pas le carnet d'une autre install."
+fi
+tui_note "Carnet, jeton, sessions. Pas le data d'une autre install."
+printf '\n'
 if [[ -n "$DATA_FLAG" ]]; then
   DATA="$DATA_FLAG"
 else
@@ -378,22 +599,37 @@ fi
 mkdir -p "$DATA"
 chmod 700 "$DATA" 2>/dev/null || true
 if [[ -f "$DATA/config.json" ]]; then
-  say "Attention: $DATA a deja une install (config.json). Le wizard ne se relancera pas."
+  printf '\n'
+  tui_note "Attention: $DATA a déjà une install (config.json). Le wizard ne se relancera pas."
   if [[ "$DRY_RUN" -eq 0 ]]; then
-    if ! yesno "Continuer quand meme ? [o/N]" n; then
+    if ! yesno "Continuer quand même ?" n; then
       exit 1
     fi
   fi
 fi
-say "Data: $DATA"
-say ""
-say "Le wizard s'ouvre sur: http://${LISTEN}/"
-say "Identifiant / mot de passe / 2FA se saisissent dans le navigateur, pas ici."
-pause
+tui_ok "$DATA"
+
+tui_header 4 "Prêt"
+tui_ok "Binaire  $BIN"
+tui_ok "Écoute   $LISTEN"
+tui_ok "Data     $DATA"
+printf '\n  %sWizard%s  http://%s/\n' "$C_COPPER$C_BOLD" "$C_RESET" "$LISTEN"
+printf '\n  %sIdentifiant, mot de passe et 2FA se saisissent dans le navigateur.%s\n' "$C_MUTE" "$C_RESET"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
-  say "Dry-run: pas de lancement. $BIN serve -listen $LISTEN -data $DATA"
+  printf '\n  %sDry-run: pas de lancement.%s\n' "$C_MUTE" "$C_RESET"
+  say "$BIN serve -listen $LISTEN -data $DATA"
   exit 0
 fi
 
+printf '\n'
+if [[ "$USE_TUI" -eq 1 ]]; then
+  printf '  %sEntrée pour lancer le serveur%s' "$C_MUTE" "$C_RESET"
+  printf '%s' "$C_SHOW"
+  read -r _
+else
+  pause
+fi
+
+printf '%s' "$C_SHOW"
 exec "$BIN" serve -listen "$LISTEN" -data "$DATA"

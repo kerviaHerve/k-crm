@@ -48,9 +48,9 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Le script detecte Go (ou le telecharge sans snap ni root), construit le binaire,
-demande IP:port et le dossier data, puis lance le wizard dans le navigateur.
-Jamais `0.0.0.0`. L'install produit reste le wizard, pas ce script.
+Le script ouvre un TUI (Go, binaire, IP, data) puis lance le wizard navigateur.
+Jamais `0.0.0.0`. `--plain` pour l'ancien affichage ligne a ligne. L'install
+produit reste le wizard, pas ce script.
 
 Le jeton n'est pas affiche. Il est dans `data/token` (mode 0600).
 
