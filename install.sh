@@ -122,24 +122,37 @@ list_ips() {
   fi
 }
 
-port_busy() {
-  local host="$1" port="$2"
-  if command -v ss >/dev/null 2>&1; then
-    ss -lnt 2>/dev/null | grep -qE "[:.]${port}[[:space:]]" && return 0
-  fi
-  python3 - "$host" "$port" <<'PY' 2>/dev/null || return 1
-import socket, sys
+# 0 = free, 1 = taken, 2 = IP not on this machine
+probe_port() {
+  python3 - "$1" "$2" <<'PY'
+import errno, socket, sys
 host, port = sys.argv[1], int(sys.argv[2])
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(0.3)
 try:
     s.bind((host, port))
-except OSError:
-    sys.exit(0)
+except OSError as e:
+    sys.exit(2 if e.errno == errno.EADDRNOTAVAIL else 1)
 finally:
     s.close()
-sys.exit(1)
+sys.exit(0)
 PY
+}
+
+port_taken() {
+  local rc=0
+  probe_port "$1" "$2" || rc=$?
+  [[ "$rc" -eq 1 ]]
+}
+
+find_free_port() {
+  local host="$1" p
+  for p in $(seq 8740 8899); do
+    if probe_port "$host" "$p"; then
+      printf '%s' "$p"
+      return 0
+    fi
+  done
+  return 1
 }
 
 refuse_wildcard() {
@@ -225,18 +238,25 @@ if refuse_wildcard "$HOST"; then
   err "refus de binder $HOST — passe une IP explicite."
   exit 1
 fi
-DEFAULT_PORT=8740
-if port_busy "$HOST" "$DEFAULT_PORT"; then
-  DEFAULT_PORT=8750
+PROBE_RC=0
+probe_port "$HOST" 8740 || PROBE_RC=$?
+if [[ "$PROBE_RC" -eq 2 ]]; then
+  err "$HOST n'est pas une adresse de cette machine. Reprends avec une IP de la liste."
+  exit 1
 fi
+if ! DEFAULT_PORT="$(find_free_port "$HOST")"; then
+  err "aucun port libre entre 8740 et 8899 sur $HOST."
+  exit 1
+fi
+say "Port libre propose: $DEFAULT_PORT"
 PORT="$(ask "Port" "$DEFAULT_PORT")"
 if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
   err "port invalide: $PORT"
   exit 1
 fi
 LISTEN="${HOST}:${PORT}"
-if port_busy "$HOST" "$PORT"; then
-  err "$LISTEN est deja pris. Relance et choisis un autre port."
+if port_taken "$HOST" "$PORT"; then
+  err "$LISTEN est pris. Le script proposait $DEFAULT_PORT."
   exit 1
 fi
 say "Listen: $LISTEN"
